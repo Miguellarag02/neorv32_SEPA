@@ -122,7 +122,7 @@ void Selection_led_mode_c(void) {
       neorv32_gpio_port_set(time & 0x1F); // increment counter and mask for lowest 8 bit
       time++;
     break;    
-    ubiub
+    
     case 2://Mode 2: Itermitente 1
       //Intermitente según si la variable time es par o impar
       if((time & 0x01)) neorv32_gpio_port_set(0x0F);
