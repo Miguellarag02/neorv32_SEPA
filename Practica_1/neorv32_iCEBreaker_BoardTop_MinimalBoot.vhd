@@ -320,7 +320,7 @@ begin
 		n_button_val <= x"2";
 	elsif (iCEBreakerv10_PMOD2_10_Button_3 = '1') then 
 		n_button_val <= x"3";
-	end if;  
+	end if; 
   end process;
   
   

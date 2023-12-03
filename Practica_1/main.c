@@ -103,6 +103,7 @@ int main() {
  **************************************************************************/
 void Selection_led_mode_c(void) {
   uint8_t time = 0;
+  int i=0;
 
   neorv32_gpio_port_set(0x20); // Asynchronous Reset
   neorv32_cpu_delay_ms(10); // wait 500ms using busy wait
@@ -141,6 +142,14 @@ void Selection_led_mode_c(void) {
     neorv32_cpu_delay_ms(200); // wait 500ms using busy wait
 
     if (time > 30){ //After 6 seconds in a mode...
+      for(i=0; i<3; i++)
+      {
+        neorv32_cpu_delay_ms(300);  //leds sequence to announce the automatic reset
+        neorv32_gpio_port_set(0x1F);
+        neorv32_cpu_delay_ms(300);
+        neorv32_gpio_port_set(0x00);
+      }
+
       neorv32_gpio_port_set(0x20); // Asynchronous Reset 
       neorv32_uart0_print("\nReset activado");
       neorv32_cpu_delay_ms(10); // wait 500ms using busy wait
