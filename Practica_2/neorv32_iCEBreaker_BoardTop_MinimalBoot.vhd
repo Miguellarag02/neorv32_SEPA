@@ -130,31 +130,6 @@ architecture neorv32_iCEBreaker_BoardTop_MinimalBoot_rtl of neorv32_iCEBreaker_B
   constant IO_PWM_NUM_CH                : natural := 3;           -- number of PWM channels to implement (0..60); 0 = disabled
   constant IO_WDT_EN                    : boolean := true;        -- implement watch dog timer (WDT)?
 
-  -- -------------------------------------------------------------------------------------------
-  -- Periferico del teclado
-  -- -------------------------------------------------------------------------------------------
-
---  component peripheral_teclado is
---    port (
---    -- 12MHz Clock input
---    clk_i                : in std_logic;
---    reset_i              : in std_logic;
---   en_i                 : in std_logic;
---    -- Rows
---    Row_1_i              : in std_logic;
---    Row_2_i              : in std_logic;
---    Row_3_i              : in std_logic;
---    Row_4_i              : in std_logic;
---  -- Cols
---    Col_1_o            : out std_logic;
---    Col_2_o            : out std_logic;
---    Col_3_o            : out std_logic;
---    Col_4_o            : out std_logic;
---    -- Key codificated in One Hot
---    Key_o     : out std_logic_vector(15 downto 0)  
---    );
---    end component;
-
 
   -- -------------------------------------------------------------------------------------------
   -- Signals for internal IO connections
@@ -166,16 +141,13 @@ architecture neorv32_iCEBreaker_BoardTop_MinimalBoot_rtl of neorv32_iCEBreaker_B
   signal c_button_val : std_logic_vector(3 downto 0):="0000";
   signal Reset_signal : std_logic;
   
-  signal c_counter : unsigned (1 downto 0);
-  signal n_counter : unsigned (1 downto 0);
+  signal c_counter : unsigned (1 downto 0):="00";
+  signal n_counter : unsigned (1 downto 0):="00";
 
-  signal c_Key     : std_logic_vector(15 downto 0);
-  signal n_Key     : std_logic_vector(15 downto 0);
+  signal c_en : std_logic := '0';
+  signal n_en : std_logic := '0';
 
-  signal c_col     : std_logic_vector(3 downto 0);
-  signal n_col     : std_logic_vector(3 downto 0);
-
-  signal s_row     : std_logic_vector(3 downto 0);
+  signal s_Key_value : std_logic_vector(15 downto 0);
 
 begin
 
@@ -232,7 +204,7 @@ begin
     ICACHE_ASSOCIATIVITY         => ICACHE_ASSOCIATIVITY,  -- i-cache: associativity / number of sets (1=direct_mapped), has to be a power of 2
 
     -- External memory interface --
-    MEM_EXT_EN                   => false,                 -- implement external memory bus interface?
+    MEM_EXT_EN                   => true,                 -- implement external memory bus interface?
     MEM_EXT_TIMEOUT              => 0,                     -- cycles after a pending bus access auto-terminates (0 = disabled)
 
     -- Processor peripherals --
@@ -327,118 +299,67 @@ begin
   );
 
 
---  peripheral_teclado_0: peripheral_teclado
---  port map(
---    clk_i     => iCEBreakerv10_CLK,
---    reset_i   => '0',
---    en_i      => '1',
---    Row_1_i   => iCEBreakerv10_PMOD1B_7,
---    Row_2_i   => iCEBreakerv10_PMOD1B_8, 
---    Row_3_i   => iCEBreakerv10_PMOD1B_9,     
---    Row_4_i   => iCEBreakerv10_PMOD1B_10, 
---    Col_1_o   => iCEBreakerv10_PMOD1B_1,
---    Col_2_o   => iCEBreakerv10_PMOD1B_2,
---    Col_3_o   => iCEBreakerv10_PMOD1B_3,
---    Col_4_o   => iCEBreakerv10_PMOD1B_4,     
---    Key_o     => c_key_value );
+  peripheral_teclado_0: entity neorv32.peripheral_teclado
+  port map(
+    clk_i     => iCEBreakerv10_CLK,
+    reset_i   => iCEBreakerv10_PMOD2_10_Button_3,
+    en_i      => c_en,
+    Row_1_i   => iCEBreakerv10_PMOD1B_7,
+    Row_2_i   => iCEBreakerv10_PMOD1B_8, 
+    Row_3_i   => iCEBreakerv10_PMOD1B_9,     
+    Row_4_i   => iCEBreakerv10_PMOD1B_10, 
+    Col_1_o   => iCEBreakerv10_PMOD1B_1,
+    Col_2_o   => iCEBreakerv10_PMOD1B_2,
+    Col_3_o   => iCEBreakerv10_PMOD1B_3,
+    Col_4_o   => iCEBreakerv10_PMOD1B_4,     
+    Key_o     => s_key_value 
+    );
 
   -- -------------------------------------------------------------------------------------------
   -- IO Connections
   -- -------------------------------------------------------------------------------------------
+  iCEBreakerv10_PMOD2_1_LED_left   <= gpio_o(0);
+  iCEBreakerv10_PMOD2_2_LED_right  <= gpio_o(1);
+  iCEBreakerv10_PMOD2_8_LED_up     <= gpio_o(2);
+  iCEBreakerv10_PMOD2_3_LED_down   <= gpio_o(3);
+  iCEBreakerv10_PMOD2_7_LED_center <= gpio_o(4);  
 
- -- Mapping Led signals from the micro
---  iCEBreakerv10_PMOD2_1_LED_left   <= gpio_o(0);
---  iCEBreakerv10_PMOD2_2_LED_right  <= gpio_o(1);
---  iCEBreakerv10_PMOD2_8_LED_up     <= gpio_o(2);
---  iCEBreakerv10_PMOD2_3_LED_down   <= gpio_o(3);
---  iCEBreakerv10_PMOD2_7_LED_center <= gpio_o(4);  
-
-  iCEBreakerv10_PMOD2_1_LED_left   <= c_key(0);
-  iCEBreakerv10_PMOD2_2_LED_right  <= c_key(1);
-  iCEBreakerv10_PMOD2_8_LED_up     <= c_key(2);
-  iCEBreakerv10_PMOD2_3_LED_down   <= c_key(3);
-  iCEBreakerv10_PMOD2_7_LED_center <= c_key(4);  
-  
   gpio_i <= x"00000000000" &
-            c_key &
+            s_key_value &
             c_button_val;
 
-  iCEBreakerv10_PMOD1B_1 <= c_col(0);
-  iCEBreakerv10_PMOD1B_2 <= c_col(1);
-  iCEBreakerv10_PMOD1B_3 <= c_col(2);
-  iCEBreakerv10_PMOD1B_4 <= c_col(3);
+  -- -------------------------------------------------------------------------------------------
+  -- Buttom process
+  -- -------------------------------------------------------------------------------------------
+  State_buttom_sinc: process(iCEBreakerv10_CLK,iCEBreakerv10_PMOD2_10_Button_3)
+  begin
+    if (iCEBreakerv10_PMOD2_10_Button_3) then --Reset
+      c_button_val <= (others => '0'); 
+      c_en <= '0';
   
-  s_row   <= iCEBreakerv10_PMOD1B_10 &
-            iCEBreakerv10_PMOD1B_9 &
-            iCEBreakerv10_PMOD1B_8 &
-            iCEBreakerv10_PMOD1B_7;
-  
+    elsif (rising_edge(iCEBreakerv10_CLK)) then
+      c_button_val <= n_button_val;
+      c_en         <= n_en;
 
-  State_Buttom: process(iCEBreakerv10_PMOD2_9_Button_1,iCEBreakerv10_PMOD2_4_Button_2,iCEBreakerv10_PMOD2_10_Button_3,c_button_val)
+    end if;
+
+  end process;
+
+  State_Buttom_comb: process(iCEBreakerv10_PMOD2_9_Button_1,iCEBreakerv10_PMOD2_4_Button_2,iCEBreakerv10_PMOD2_10_Button_3,c_button_val)
   begin
  	-- Keep the state
   	n_button_val <= c_button_val; 
-  	Reset_signal <= '0';
+    n_en <= c_en;
   	-- We are sending which buttom has been pushed
   	if (iCEBreakerv10_PMOD2_9_Button_1 = '1') then
 		n_button_val <= x"1";
 	elsif (iCEBreakerv10_PMOD2_4_Button_2 = '1') then
 		n_button_val <= x"2";
+    n_en <= '0';
 	elsif (iCEBreakerv10_PMOD2_10_Button_3 = '1') then 
 		n_button_val <= x"3";
-    Reset_signal <= '1';
 	end if;  
   end process;
   
-  peripheral_teclado_sinc: process(iCEBreakerv10_CLK, Reset_signal)
-  begin
-      if (Reset_signal = '1') then
-          c_counter   <=  (others => '0');
-          c_col       <= (others => '0');   
-          c_key       <= (others => '0');
 
-      elsif ( rising_edge(iCEBreakerv10_CLK)) then
-          c_counter   <= n_counter;
-          c_col       <= n_col;
-          c_key       <= n_key;
-
-      end if;
-  end process;
-
-
-  peripheral_teclado_decode: process(c_counter,s_row,c_col,c_key)
-  begin
-  n_key       <= (others => '0');
-  n_col       <= (others => '0');
-  n_counter   <= c_counter + 1;
-
-      case (c_counter) is
-          when "00" =>
-              n_col   <=  "1110";
-              if (s_row /= "1111") then
-                  n_key <= x"000" & not(s_row);
-              end if;
-              
-          when "01" =>
-              n_col   <=  "1101";
-              if (s_row /= "1111") then
-                  n_key <= x"00" & not(s_row) & x"0";
-              end if;
-
-          when "10" =>
-              n_col   <=  "1011";
-              if (s_row /= "1111") then
-                  n_key <= x"0" & not(s_row) & x"00";
-              end if;
-
-          when others =>
-              n_col   <=  "0111";
-              if (s_row /= "1111") then
-                  n_key <= not(s_row) & x"000";
-              end if;
-
-      end case;
-
-  end process;
-  
 end architecture;
