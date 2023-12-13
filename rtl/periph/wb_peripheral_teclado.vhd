@@ -3,10 +3,13 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+--library neorv32; Error
+
+
 entity wb_peripheral_teclado is
   generic(
-    WB_BASE_ADDRESS     : std_ulogic_vector(31 downto 0) := x"90000000";
-    WB_NUM_REGS         : integer  := 2 --Two registers
+    WB_ADDR_BASE        : std_ulogic_vector(31 downto 0) := x"90000000";
+    WB_ADDR_SIZE        : integer := 8
   );
       -- Top-level ports. Board pins are defined in setups/osflow/constraints/iCEBreaker.pcf
   port (
@@ -38,10 +41,7 @@ entity wb_peripheral_teclado is
     Col_1_o              : out std_logic;
     Col_2_o              : out std_logic;
     Col_3_o              : out std_logic;
-    Col_4_o              : out std_logic;
-
-    -- Key codificated in One Hot
-    Key_o     : out std_ulogic_vector(15 downto 0)
+    Col_4_o              : out std_logic
 
     );
 end entity;
@@ -56,7 +56,7 @@ architecture wb_peripheral_rtl of wb_peripheral_teclado is
 		);
 
     -- internal constants --
-    constant addr_mask_c : std_ulogic_vector(31 downto 0) := std_ulogic_vector(to_unsigned((WB_NUM_REGS*4)-1, 32));
+    constant addr_mask_c : std_ulogic_vector(31 downto 0) := std_ulogic_vector(to_unsigned(WB_ADDR_SIZE-1, 32));
     constant all_zero_c  : std_ulogic_vector(31 downto 0) := (others => '0');
 
     -----------------------------------------------------------    
@@ -76,7 +76,7 @@ architecture wb_peripheral_rtl of wb_peripheral_teclado is
     signal c_counter        : unsigned (1 downto 0);
     signal n_counter        : unsigned (1 downto 0);
 
-    signal c_key            : std_ulogic_vector(15 downto 0);
+    signal c_key            : std_ulogic_vector(15 downto 0); -- Update each cycle
     signal n_key            : std_ulogic_vector(15 downto 0);
 
     signal c_state_tx       : state_t;
@@ -87,19 +87,47 @@ architecture wb_peripheral_rtl of wb_peripheral_teclado is
 
     signal s_row            : std_ulogic_vector(3 downto 0);
 
+    signal c_key_value      : std_ulogic_vector(15 downto 0); -- Update each four cycles
+    signal n_key_value      : std_ulogic_vector(15 downto 0);
+
+    -- Function: Test if input number is a power of two ---------------------------------------
+    -- -------------------------------------------------------------------------------------------
+    function is_power_of_two_f(input : natural) return boolean is
+    begin
+        if (input = 1) then -- 2^0
+        return true;
+        elsif ((input / 2) /= 0) and ((input mod 2) = 0) then
+        return true;
+        else
+        return false;
+        end if;
+    end function is_power_of_two_f;
+
+        -- Function: Minimal required number of bits to represent input number --------------------
+    -- -------------------------------------------------------------------------------------------
+    function index_size_f(input : natural) return natural is
+    begin
+        for i in 0 to natural'high loop
+        if (2**i >= input) then
+            return i;
+        end if;
+        end loop; -- i
+        return 0;
+    end function index_size_f;
+
+
     begin
 
-    -------------------------------------------------------
-    -- Sanity Checks                                    ---
-    -------------------------------------------------------
-    -- Address space will always be a power of two, so I don't check it.
-    assert not ((std_ulogic_vector(to_unsigned((WB_NUM_REGS*4), 32)) and addr_mask_c) /= all_zero_c) report "wb_regs config ERROR: Module base address <WB_ADDR_BASE> has to be aligned to its address space <WB_ADDR_SIZE>." severity error;
+    -- Sanity Checks --------------------------------------------------------------------------
+    -- -------------------------------------------------------------------------------------------
+    assert not (WB_ADDR_SIZE < 4) report "wb_regs config ERROR: Address space <WB_ADDR_SIZE> has to be at least 4 bytes." severity error;
+    assert not (is_power_of_two_f(WB_ADDR_SIZE) = false) report "wb_regs config ERROR: Address space <WB_ADDR_SIZE> has to be a power of two." severity error;
+    assert not ((WB_ADDR_BASE and addr_mask_c) /= all_zero_c) report "wb_regs config ERROR: Module base address <WB_ADDR_BASE> has to be aligned to its address space <WB_ADDR_SIZE>." severity error;
 
-    -------------------------------------------------------
-    -- Device Access?                                   ---
-    -------------------------------------------------------
-    access_req <= '1' when ((wb_adr_i and (not addr_mask_c)) = ((std_ulogic_vector(to_unsigned((WB_NUM_REGS*4), 32))) and (not addr_mask_c))) 
-                        else '0';
+    -- Device Access? -------------------------------------------------------------------------
+    -- -------------------------------------------------------------------------------------------
+    access_req <= '1' when ((wb_adr_i and (not addr_mask_c)) = (WB_ADDR_BASE and (not addr_mask_c))) else '0';
+
 
     -------------------------------------------------------
     -- Concurrents Outputs                              ---
@@ -114,32 +142,44 @@ architecture wb_peripheral_rtl of wb_peripheral_teclado is
                Row_2_i &
                Row_1_i;
 
-    Key_o   <= c_key;
-
-    -------------------------------------------------------
-    -- Read key processs                                ---
-    -------------------------------------------------------
               
     peripheral_teclado_sinc: process(clk_i, reset_i)
     begin
         if (reset_i = '1') then
-            c_counter   <=  (others => '0');
+            c_counter   <= (others => '0');
             c_col       <= (others => '0');   
             c_key       <= (others => '0');
+            c_key_value <= (others => '0');
+            c_reg0      <= (others => '0');
+            c_reg1      <= (others => '0');
 
         elsif ( rising_edge(clk_i)) then
             c_counter   <= n_counter;
             c_col       <= n_col;
             c_key       <= n_key;
+            c_key_value <= n_key_value;
+            c_reg0      <= n_reg0; 
+            c_reg1      <= n_reg1;
 
         end if;
     end process;
 
-    peripheral_teclado_decode: process(c_counter,s_row,c_col,c_key)
+    -------------------------------------------------------
+    -- Read key processs                                ---
+    -------------------------------------------------------
+
+    peripheral_teclado_decode: process(c_counter, s_row, c_col, c_key, c_key_value)
     begin
-    n_key       <= (others => '0');
+    n_key       <= c_key;
     n_col       <= (others => '0');
     n_counter   <= (others => '0');
+    n_key_value <= c_key_value;
+
+    -- Sampling the value each four cycles.
+    if(c_counter = "00" and c_key /= "00000000" ) then
+        n_key_value <= c_key;     
+        n_key <= (others => '0'); -- Reset de value
+    end if;
 
     if (en_i = '1') then
         n_counter   <= c_counter + 1;
@@ -178,32 +218,13 @@ end process;
     -- WISHBONE PROCESS                                 ---
     -------------------------------------------------------
 
-
-    wb_peripheral_teclado_tx_sinc: process(clk_i, reset_i)
-    begin
-        if (reset_i = '1') then
-            c_reg0 <= x"ACCEDE00"; --(others => '0');
-            c_reg1 <= x"DEC0DE01"; --(others => '0');
-            --reg2 <= x"C0FFEE02"; --(others => '0');
-            --reg3 <= x"BA0BAB03"; --(others => '0');
-
-
-        elsif (rising_edge(clk_i)) then
-            c_reg0 <= n_reg0;
-            c_reg1 <= n_reg1;
-            --c_reg2 <= n_reg2;
-            --c_reg3 <= n_reg3;
-
-
-        end if;
-    end process;
-
     wb_peripheral_teclado_tx_comb: process(
         wb_cyc_i, 
         wb_stb_i, 
         wb_sel_i, 
         access_req, 
         wb_we_i,
+        c_key_value,
         c_reg0, 
         c_reg1 
         --c_reg2, 
@@ -211,7 +232,7 @@ end process;
         )
     begin
         -- Keep values
-        n_reg0 <= c_reg0; -- x"0000" & c_key; -- Key value
+        n_reg0 <=  x"0000" & c_key_value;
         n_reg1 <= c_reg1;
         --n_reg2 <= reg2;
         --n_reg3 <= reg3;
@@ -224,9 +245,9 @@ end process;
 
         -- Write access, only full-word accesses
         if (wb_we_i = '1' and wb_sel_i = "1111") then
-            case to_integer(unsigned(wb_adr_i(((WB_NUM_REGS/2)*2)+2 downto 2))) is
+            case to_integer(unsigned(wb_adr_i(index_size_f(WB_ADDR_SIZE)-1 downto 2))) is
             when 0 =>
-                -- n_reg0 <= wb_dat_i; Forbidden write here!!
+                n_reg0 <= wb_dat_i; 
             when 1 =>
                 n_reg1 <= wb_dat_i;
                 
@@ -240,7 +261,7 @@ end process;
             wb_ack_o <= '1';
         else
         -- Read access
-            case to_integer(unsigned(wb_adr_i(((WB_NUM_REGS/2)*2)+2 downto 2))) is
+            case to_integer(unsigned(wb_adr_i(index_size_f(WB_ADDR_SIZE)-1 downto 2))) is
             when 0 =>
                 wb_dat_o <= c_reg0;
             when 1 =>
