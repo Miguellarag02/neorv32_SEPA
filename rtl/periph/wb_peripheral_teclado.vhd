@@ -9,7 +9,7 @@ use ieee.numeric_std.all;
 entity wb_peripheral_teclado is
   generic(
     WB_ADDR_BASE        : std_ulogic_vector(31 downto 0) := x"90000000";
-    WB_ADDR_SIZE        : integer := 8
+    WB_ADDR_SIZE        : integer := 20
   );
       -- Top-level ports. Board pins are defined in setups/osflow/constraints/iCEBreaker.pcf
   port (
@@ -69,8 +69,9 @@ architecture wb_peripheral_rtl of wb_peripheral_teclado is
     -- registers --
     signal c_reg0, n_reg0   : std_ulogic_vector(31 downto 0);
     signal c_reg1, n_reg1   : std_ulogic_vector(31 downto 0);
-    --signal c_reg2, n_reg2   : std_ulogic_vector(31 downto 0);
-    --signal c_reg3, n_reg3   : std_ulogic_vector(31 downto 0);
+    signal c_reg2, n_reg2   : std_ulogic_vector(31 downto 0);
+    signal c_reg3, n_reg3   : std_ulogic_vector(31 downto 0);
+    signal c_reg4, n_reg4   : std_ulogic_vector(31 downto 0);
 
 
     signal c_counter        : unsigned (1 downto 0);
@@ -103,7 +104,7 @@ architecture wb_peripheral_rtl of wb_peripheral_teclado is
         end if;
     end function is_power_of_two_f;
 
-        -- Function: Minimal required number of bits to represent input number --------------------
+    -- Function: Minimal required number of bits to represent input number --------------------
     -- -------------------------------------------------------------------------------------------
     function index_size_f(input : natural) return natural is
     begin
@@ -119,13 +120,13 @@ architecture wb_peripheral_rtl of wb_peripheral_teclado is
     begin
 
     -- Sanity Checks --------------------------------------------------------------------------
-    -- -------------------------------------------------------------------------------------------
+    -- ----------------------------------------------------------------------------------------
     assert not (WB_ADDR_SIZE < 4) report "wb_regs config ERROR: Address space <WB_ADDR_SIZE> has to be at least 4 bytes." severity error;
     assert not (is_power_of_two_f(WB_ADDR_SIZE) = false) report "wb_regs config ERROR: Address space <WB_ADDR_SIZE> has to be a power of two." severity error;
     assert not ((WB_ADDR_BASE and addr_mask_c) /= all_zero_c) report "wb_regs config ERROR: Module base address <WB_ADDR_BASE> has to be aligned to its address space <WB_ADDR_SIZE>." severity error;
 
     -- Device Access? -------------------------------------------------------------------------
-    -- -------------------------------------------------------------------------------------------
+    -- ----------------------------------------------------------------------------------------
     access_req <= '1' when ((wb_adr_i and (not addr_mask_c)) = (WB_ADDR_BASE and (not addr_mask_c))) else '0';
 
 
@@ -141,8 +142,10 @@ architecture wb_peripheral_rtl of wb_peripheral_teclado is
                Row_3_i &
                Row_2_i &
                Row_1_i;
-
-              
+           
+    -------------------------------------------------------
+    -- Sinc processs                                    ---
+    -------------------------------------------------------
     peripheral_teclado_sinc: process(clk_i, reset_i)
     begin
         if (reset_i = '1') then
@@ -152,14 +155,20 @@ architecture wb_peripheral_rtl of wb_peripheral_teclado is
             c_key_value <= (others => '0');
             c_reg0      <= (others => '0');
             c_reg1      <= (others => '0');
+            c_reg2      <= (others => '0');
+            c_reg3      <= (others => '0');
+            c_reg4      <= (others => '0');
 
         elsif ( rising_edge(clk_i)) then
             c_counter   <= n_counter;
             c_col       <= n_col;
             c_key       <= n_key;
             c_key_value <= n_key_value;
-            c_reg0      <= n_reg0; 
-            c_reg1      <= n_reg1;
+            c_reg0      <= n_reg0; -- Storage the Key_value
+            c_reg1      <= n_reg1; -- Storage the Value A 
+            c_reg2      <= n_reg2; -- Storage the Value B
+            c_reg3      <= n_reg3; -- Storage the Command Operation and the validation signal
+            c_reg4      <= n_reg4; -- Storage the Result value
 
         end if;
     end process;
@@ -170,48 +179,48 @@ architecture wb_peripheral_rtl of wb_peripheral_teclado is
 
     peripheral_teclado_decode: process(c_counter, s_row, c_col, c_key, c_key_value)
     begin
-    n_key       <= c_key;
-    n_col       <= (others => '0');
-    n_counter   <= (others => '0');
-    n_key_value <= c_key_value;
+        n_key       <= c_key;
+        n_col       <= (others => '0');
+        n_counter   <= (others => '0');
+        n_key_value <= c_key_value;
 
-    -- Sampling the value each four cycles.
-    if(c_counter = "00" and c_key /= "00000000" ) then
-        n_key_value <= c_key;     
-        n_key <= (others => '0'); -- Reset de value
-    end if;
+        -- Sampling the value each four cycles.
+        if(c_counter = "00" and c_key /= "00000000" ) then
+            n_key_value <= c_key;     
+            n_key <= (others => '0'); -- Reset de value
+        end if;
 
-    if (en_i = '1') then
-        n_counter   <= c_counter + 1;
+        if (en_i = '1') then
+            n_counter   <= c_counter + 1;
 
-        case (c_counter) is
-            when "00" =>
-                n_col   <=  "1110";
-                if (s_row /= "1111") then
-                    n_key <= x"000" & not(s_row);
-                end if;
-                
-            when "01" =>
-                n_col   <=  "1101";
-                if (s_row /= "1111") then
-                    n_key <= x"00" & not(s_row) & x"0";
-                end if;
+            case (c_counter) is
+                when "00" =>
+                    n_col   <=  "1110";
+                    if (s_row /= "1111") then
+                        n_key <= x"000" & not(s_row);
+                    end if;
+                    
+                when "01" =>
+                    n_col   <=  "1101";
+                    if (s_row /= "1111") then
+                        n_key <= x"00" & not(s_row) & x"0";
+                    end if;
 
-            when "10" =>
-                n_col   <=  "1011";
-                if (s_row /= "1111") then
-                    n_key <= x"0" & not(s_row) & x"00";
-                end if;
+                when "10" =>
+                    n_col   <=  "1011";
+                    if (s_row /= "1111") then
+                        n_key <= x"0" & not(s_row) & x"00";
+                    end if;
 
-            when others =>
-                n_col   <=  "0111";
-                if (s_row /= "1111") then
-                    n_key <= not(s_row) & x"000";
-                end if;
-        end case;
-    end if;
+                when others =>
+                    n_col   <=  "0111";
+                    if (s_row /= "1111") then
+                        n_key <= not(s_row) & x"000";
+                    end if;
+            end case;
+        end if;
 
-end process;
+    end process;
 
 
     -------------------------------------------------------
@@ -225,17 +234,20 @@ end process;
         access_req, 
         wb_we_i,
         c_key_value,
-        c_reg0, 
-        c_reg1 
-        --c_reg2, 
-        --c_reg3
+        c_reg0, -- Storage the Key_value
+        c_reg1, -- Storage the Value A 
+        c_reg2, -- Storage the Value B
+        c_reg3, -- Storage the Command Operation and the validation signal
+        c_reg4  -- Storage the Result value
         )
     begin
         -- Keep values
         n_reg0 <=  x"0000" & c_key_value;
         n_reg1 <= c_reg1;
-        --n_reg2 <= reg2;
-        --n_reg3 <= reg3;
+        n_reg2 <= c_reg2;
+        n_reg3 <= c_reg3;
+        n_reg4 <= c_reg4;
+
         wb_dat_o <= c_reg0;
         -- Default ack is inactive
         wb_ack_o <= '0';
@@ -243,42 +255,46 @@ end process;
         -- Is the peripheral selected?
         if (wb_cyc_i = '1') and (wb_stb_i = '1') and (access_req = '1') then
 
-        -- Write access, only full-word accesses
-        if (wb_we_i = '1' and wb_sel_i = "1111") then
-            case to_integer(unsigned(wb_adr_i(index_size_f(WB_ADDR_SIZE)-1 downto 2))) is
-            when 0 =>
-                n_reg0 <= wb_dat_i; 
-            when 1 =>
-                n_reg1 <= wb_dat_i;
-                
-            --when 2 =>
-                --n_reg2 <= wb_dat_i;
-            --when 3 =>
-                --n_reg3 <= wb_dat_i;
-            when others =>
-                null;
-            end case;
-            wb_ack_o <= '1';
-        else
-        -- Read access
-            case to_integer(unsigned(wb_adr_i(index_size_f(WB_ADDR_SIZE)-1 downto 2))) is
-            when 0 =>
-                wb_dat_o <= c_reg0;
-            when 1 =>
-                wb_dat_o <= c_reg1;
-            --when 2 =>
-                --wb_dat_o <= c_reg2;
-            --when 3 =>
-                --wb_dat_o <= c_reg3;
-            when others =>
-                null;
-            end case;
-            wb_ack_o <= '1';
-        end if;
+            -- Write access, only full-word accesses
+            if (wb_we_i = '1' and wb_sel_i = "1111") then
+                case to_integer(unsigned(wb_adr_i(index_size_f(WB_ADDR_SIZE)-1 downto 2))) is
+                    when 0 =>
+                        n_reg0 <= wb_dat_i; 
+                    when 1 =>
+                        n_reg1 <= wb_dat_i;
+                    when 2 =>
+                        n_reg2 <= wb_dat_i;
+                    when 3 =>
+                        n_reg3 <= wb_dat_i;
+                    when 4 =>
+                        n_reg4 <= wb_dat_i;
+                    when others =>
+                        null;
+                end case;
+                wb_ack_o <= '1';
+            else
+            -- Read access
+                case to_integer(unsigned(wb_adr_i(index_size_f(WB_ADDR_SIZE)-1 downto 2))) is
+                    when 0 =>
+                        wb_dat_o <= c_reg0;
+                    when 1 =>
+                        wb_dat_o <= c_reg1;
+                    when 2 =>
+                        wb_dat_o <= c_reg2;
+                    when 3 =>
+                        wb_dat_o <= c_reg3;
+                    when 4 =>
+                        wb_dat_o <= c_reg4;
+                    when others =>
+                        null;
+                end case;
+                wb_ack_o <= '1';
+            end if;
 
         end if;
 
     end process;
+
 
   -------------------------------------------------------
   -- Errors can not happen in this module             ---
