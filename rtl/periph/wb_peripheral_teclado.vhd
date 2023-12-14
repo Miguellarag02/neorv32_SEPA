@@ -3,7 +3,8 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
---library neorv32; Error
+library neorv32;
+use neorv32.neorv32_package.all;
 
 
 entity wb_peripheral_teclado is
@@ -91,31 +92,8 @@ architecture wb_peripheral_rtl of wb_peripheral_teclado is
     signal c_key_value      : std_ulogic_vector(15 downto 0); -- Update each four cycles
     signal n_key_value      : std_ulogic_vector(15 downto 0);
 
-    -- Function: Test if input number is a power of two ---------------------------------------
-    -- -------------------------------------------------------------------------------------------
-    function is_power_of_two_f(input : natural) return boolean is
-    begin
-        if (input = 1) then -- 2^0
-        return true;
-        elsif ((input / 2) /= 0) and ((input mod 2) = 0) then
-        return true;
-        else
-        return false;
-        end if;
-    end function is_power_of_two_f;
-
-    -- Function: Minimal required number of bits to represent input number --------------------
-    -- -------------------------------------------------------------------------------------------
-    function index_size_f(input : natural) return natural is
-    begin
-        for i in 0 to natural'high loop
-        if (2**i >= input) then
-            return i;
-        end if;
-        end loop; -- i
-        return 0;
-    end function index_size_f;
-
+    signal c_Password_result  : std_logic_vector(3 downto 0);
+    signal n_Password_result  : std_logic_vector(3 downto 0);
 
     begin
 
@@ -165,10 +143,10 @@ architecture wb_peripheral_rtl of wb_peripheral_teclado is
             c_key       <= n_key;
             c_key_value <= n_key_value;
             c_reg0      <= n_reg0; -- Storage the Key_value
-            c_reg1      <= n_reg1; -- Storage the Value A 
-            c_reg2      <= n_reg2; -- Storage the Value B
-            c_reg3      <= n_reg3; -- Storage the Command Operation and the validation signal
-            c_reg4      <= n_reg4; -- Storage the Result value
+            c_reg1      <= n_reg1; -- Storage the user password
+            c_reg2      <= n_reg2; -- Storage the controls signals
+            c_reg3      <= n_reg3; -- Storage the real password
+            c_reg4      <= n_reg4; -- Storage the AND result between the user and the real password
 
         end if;
     end process;
@@ -235,10 +213,10 @@ architecture wb_peripheral_rtl of wb_peripheral_teclado is
         wb_we_i,
         c_key_value,
         c_reg0, -- Storage the Key_value
-        c_reg1, -- Storage the Value A 
-        c_reg2, -- Storage the Value B
-        c_reg3, -- Storage the Command Operation and the validation signal
-        c_reg4  -- Storage the Result value
+        c_reg1, -- Storage the User password
+        c_reg2, -- Storage the Control signal
+        c_reg3, -- Storage the Real Password
+        c_reg4  -- Storage the Comparation result
         )
     begin
         -- Keep values
@@ -247,6 +225,11 @@ architecture wb_peripheral_rtl of wb_peripheral_teclado is
         n_reg2 <= c_reg2;
         n_reg3 <= c_reg3;
         n_reg4 <= c_reg4;
+
+        if (c_reg2(7 downto 0) = x"10") then -- New Password
+            n_reg2 <= (others => '0');
+            n_reg3 <= c_reg1; 
+        end if;
 
         wb_dat_o <= c_reg0;
         -- Default ack is inactive
@@ -295,6 +278,47 @@ architecture wb_peripheral_rtl of wb_peripheral_teclado is
 
     end process;
 
+    
+    -------------------------------------------------------
+    -- COMPARE THE PASSWORD                             ---
+    -------------------------------------------------------
+    wb_peripheral_teclado_Compare_password_comb: process(
+        c_reg1, 
+        c_reg2,
+        c_reg3, 
+        c_Password_result
+        )
+    begin   
+
+        case(c_reg2(3 downto 0)) is
+                
+            when x"1" => -- Command "A"
+                if ((c_reg1(7 downto 0) xor c_reg3(7 downto 0)) = "11111111") then
+                    n_Password_result <= c_Password_result(3 downto 1) & "1";
+                end if;
+
+            when x"2"  => -- Command "B"
+                if ((c_reg1(7 downto 0) xor c_reg3(15 downto 8)) = "11111111") then
+                    n_Password_result <= c_Password_result(3 downto 2) & "1" & c_Password_result(0 downto 0);
+                end if;
+            
+            when x"4"  => -- Command "C"
+                if ((c_reg1(7 downto 0) xor c_reg3(23 downto 16)) = "11111111") then
+                    n_Password_result <= c_Password_result(3 downto 3) & "1" & c_Password_result(1 downto 0);
+                end if;
+
+            when x"8"  => -- Command "D"
+                if ((c_reg1(7 downto 0) xor c_reg3(31 downto 24)) = "11111111") then
+                    n_Password_result <= "1" & c_Password_result(2 downto 0);
+                end if;
+
+            when others => -- Nothimg
+                n_Password_result <= c_Password_result;
+
+        end case;
+
+
+    end process;
 
   -------------------------------------------------------
   -- Errors can not happen in this module             ---
