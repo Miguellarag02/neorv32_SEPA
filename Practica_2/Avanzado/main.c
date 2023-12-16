@@ -104,47 +104,46 @@ int main() {
  **************************************************************************/
 void Calculadora(void) {
  
-  //int j=0;
+  
   int pSUBS=0,pADD=0,pPRO=0,sign=1;                 
   int total_value = 0;
   int operando1 = 0;
   int result = 0;
 
-  uint8_t caracter_value = 0; 
+ 
   uint8_t q_caracter_value = 0;
   uint8_t Key_value = 0; 
   uint8_t q_key_value = 0;
 
 
-  //neorv32_gpio_port_set(0x20); // Asynchronous Reset------------------------->Modify later to P2
+  
   neorv32_cpu_delay_ms(10); // wait 500ms using busy wait
   neorv32_gpio_port_set(0); // clear gpio output
   
   while (1) {
 
-  caracter_value = Lee_teclado();
+  
   q_caracter_value = maquina_boton1();
   Key_value = Lee_teclado();
 
-    if(Key_value != 0xFF){
-      if(Key_value != q_key_value){
-        neorv32_uart0_print("\nSe ha pulsado la tecla: \n");
-        if(Key_value < 10) neorv32_uart0_printf("%u",Key_value);
-        else neorv32_uart0_printf("%c",Key_value);
-        q_key_value = Key_value;
-      }
-    }
+    // if(Key_value != 0xFF){
+    //   if(Key_value != q_key_value){
+    //     neorv32_uart0_print("\nSe ha pulsado la tecla: \n");
+    //     if(Key_value < 10) neorv32_uart0_printf("%u",Key_value);
+    //     else if(Key_value>964 && Key_value<71) neorv32_uart0_printf("%c",Key_value);
+    //     q_key_value = Key_value;
+    //   }
+      
+    // }
+    // else{q_key_value = 0xFF;}
 
     
 
-    if(maquina_boton1()){ 
-         neorv32_uart0_printf("ESTAMOS EN EL BUCLE\n");
-      if(Key_value<=9)           //CON KEY_VALUE FUNCIONA, CON CARACTER VALUE NO XD, VER EL SIGUIENTE IF
+    if(q_caracter_value == 1){ 
+      if(Key_value<=9)
       {
-        neorv32_uart0_printf("ESTAMOS EN EL IF\n");
         int decimal = 0;
-        decimal = caracter_value;
-        //q_caracter_value = caracter_value;
+        decimal = Key_value;
        
         total_value = total_value*10 +decimal;
                 
@@ -154,15 +153,11 @@ void Calculadora(void) {
         
       }
 
-      else if(caracter_value>9 && caracter_value<71)
-      {
-        neorv32_uart0_printf("ESTAMOS EN EL 2IF\n");   
-        switch(caracter_value){
+      else if(Key_value>9 && Key_value<71)
+      { 
+        switch(Key_value){
           case 65: //ANS
-            // Read the values of the buttons
             total_value = result;
-            //j = 0;
-            //q_caracter_value = caracter_value;
             neorv32_uart0_printf("Guardado el resultado anterior: \n",result);
           break;
 
@@ -172,8 +167,6 @@ void Calculadora(void) {
             total_value = 0;
             pSUBS=0;
             pPRO=0;
-            //j=0;
-            //q_caracter_value = caracter_value;
             neorv32_uart0_print("+\n");
           break;    
           
@@ -189,8 +182,6 @@ void Calculadora(void) {
             }
             pADD=0;
             pPRO=0;
-            //j=0;
-            //q_caracter_value = caracter_value;
             neorv32_uart0_print("-\n");
           break;
           
@@ -200,21 +191,15 @@ void Calculadora(void) {
             total_value = 0;
             pSUBS=0;
             pADD=0;
-            //j=0;
-            //q_caracter_value = caracter_value;
             neorv32_uart0_print("x\n");
           break;
 
-          case 69://AC  
-            //neorv32_gpio_port_set(0x20); // Asynchronous Reset------------------------->Modify later to P2   
-            //neorv32_gpio_port_set(0); // clear gpio output   
+          case 69://AC    
             total_value=0;
             pSUBS=0;
             pADD=0;
             pPRO=0;
             sign=1;
-            //j=0;
-            //q_caracter_value = caracter_value;
               
             neorv32_uart0_print("Variables reseteadas\n");
           break;
@@ -228,8 +213,6 @@ void Calculadora(void) {
             pADD=0;
             pPRO=0;
             sign=1;
-            //j=0;
-            //q_caracter_value = caracter_value;
             neorv32_uart0_print("------------------------\n");
             neorv32_uart0_printf("El resultado es: %u\n",result);
           break;
@@ -237,7 +220,7 @@ void Calculadora(void) {
     
       }
       
-     } //neorv32_cpu_delay_ms(500); // PARA NO PULSAR VARIAS VECES ANTES DE SOLUCIONARLO BIEN
+     } 
     
   }
 }
@@ -252,7 +235,6 @@ uint8_t maquina_boton1(void)
     case 0:
         if(valor != 0xFF)  
         {
-          neorv32_uart0_printf("estadoB1=1\n");
           estadoB1=1;
           }
         break;
