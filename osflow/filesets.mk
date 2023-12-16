@@ -47,7 +47,8 @@ NEORV32_CORE_SRC := \
 
   NEORV32_PER_SRC := \
   $(RTL_CORE_SRC)/../periph/peripheral_teclado.vhd \
-  $(RTL_CORE_SRC)/../periph/wb_peripheral_teclado.vhd
+  $(RTL_CORE_SRC)/../periph/wb_peripheral_teclado.vhd \
+  $(RTL_CORE_SRC)/../periph/wb_7SegmentDisplay.vhd
 
 # Before including this partial makefile, NEORV32_MEM_SRC needs to be set
 # (containing two VHDL sources: one for IMEM and one for DMEM)
