@@ -290,25 +290,27 @@ architecture wb_peripheral_rtl of wb_peripheral_teclado is
         )
     begin   
 
+        n_Password_result <= (others => '0'); 
+        
         case(c_reg2(3 downto 0)) is
                 
             when x"1" => -- Command "A"
-                if ((c_reg1(7 downto 0) xor c_reg3(7 downto 0)) = "11111111") then
+                if ((c_reg1(7 downto 0) xnor c_reg3(7 downto 0)) = "11111111") then
                     n_Password_result <= c_Password_result(3 downto 1) & "1";
                 end if;
 
             when x"2"  => -- Command "B"
-                if ((c_reg1(7 downto 0) xor c_reg3(15 downto 8)) = "11111111") then
-                    n_Password_result <= c_Password_result(3 downto 2) & "1" & c_Password_result(0 downto 0);
+                if ((c_reg1(7 downto 0) xnor c_reg3(15 downto 8)) = "11111111") then
+                    n_Password_result <= c_Password_result(3 downto 2) & "1" & c_Password_result(0);
                 end if;
             
             when x"4"  => -- Command "C"
-                if ((c_reg1(7 downto 0) xor c_reg3(23 downto 16)) = "11111111") then
-                    n_Password_result <= c_Password_result(3 downto 3) & "1" & c_Password_result(1 downto 0);
+                if ((c_reg1(7 downto 0) xnor c_reg3(23 downto 16)) = "11111111") then
+                    n_Password_result <= c_Password_result(3) & "1" & c_Password_result(1 downto 0);
                 end if;
 
             when x"8"  => -- Command "D"
-                if ((c_reg1(7 downto 0) xor c_reg3(31 downto 24)) = "11111111") then
+                if ((c_reg1(7 downto 0) xnor c_reg3(31 downto 24)) = "11111111") then
                     n_Password_result <= "1" & c_Password_result(2 downto 0);
                 end if;
 
