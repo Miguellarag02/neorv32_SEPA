@@ -62,7 +62,10 @@
 /**********************************************************************//**
  * C function to blink LEDs
  **************************************************************************/
-void Selection_led_mode_c(void);
+//void Selection_led_mode_c(void);
+void Calculadora(void);
+uint8_t maquina_boton1(void);
+uint8_t Lee_teclado(void);
 
 
 /**********************************************************************//**
@@ -88,13 +91,10 @@ int main() {
   neorv32_rte_setup();
 
   // Indicate to the user that the program is running
-  neorv32_uart0_print("Running Practica1_mod program\n\n");
-  neorv32_uart0_print("Pulse un boton para reproducir una secuencia:\n");
-  neorv32_uart0_print("\t1. Contador\n");
-  neorv32_uart0_print("\t2. Intermitente 1\n");
-  neorv32_uart0_print("\t3. Intermitente 2\n");
+  neorv32_uart0_print("Running Practica2 program\n\n");
+  neorv32_uart0_print("Pulse los botones para utilizar la calculadora:\n");
 
-  Selection_led_mode_c();
+  Calculadora();
 
   return 0;
 }
@@ -103,99 +103,193 @@ int main() {
  * Led mode fuction
  **************************************************************************/
 void Calculadora(void) {
-  uint8_t time = 0;
-  int j=0,pSUBS=0,pADD=0,pPRO=0,sign=1;                 
+ 
+  //int j=0;
+  int pSUBS=0,pADD=0,pPRO=0,sign=1;                 
   int total_value = 0;
   int operando1 = 0;
   int result = 0;
 
+  uint8_t caracter_value = 0; 
+  uint8_t q_caracter_value = 0;
+  uint8_t Key_value = 0; 
+  uint8_t q_key_value = 0;
 
-  neorv32_gpio_port_set(0x20); // Asynchronous Reset------------------------->Modify later to P2
+
+  //neorv32_gpio_port_set(0x20); // Asynchronous Reset------------------------->Modify later to P2
   neorv32_cpu_delay_ms(10); // wait 500ms using busy wait
   neorv32_gpio_port_set(0); // clear gpio output
   
   while (1) {
 
-   
-    	// Read the values of the buttons
-   	Button_value = neorv32_gpio_port_get();
-    /* Mi idea es que cuando asignes los valores x"1",x"2"... lo hagas en orden para números y letras, principalmente los numeros.
-      Además, me da igual qué posición de la gpio metemos el valor de la pulsación, pero si por no cambiar los leds los pones por 
-      ejemplo en la [8], cambia aquí en el primer if Button_value[i] a la que sea */
+  caracter_value = Lee_teclado();
+  q_caracter_value = maquina_boton1();
+  Key_value = Lee_teclado();
 
-    if(Button_value<='9')                          //HAY QUE HACER ALGO PARA QUE SE PULSE UNA SOLA VEZ
-    {
-      int decimal = 0;
-      decimal = Button_value[0] - '0';
-      if(j==0){total_value = decimal;j++;}     //En verdad creo que esto no es necesario(concatenamos con un 0 a la izquierda)
-      else
-      {
-        total_value = total_value & decimal;
+    if(Key_value != 0xFF){
+      if(Key_value != q_key_value){
+        neorv32_uart0_print("\nSe ha pulsado la tecla: \n");
+        if(Key_value < 10) neorv32_uart0_printf("%u",Key_value);
+        else neorv32_uart0_printf("%c",Key_value);
+        q_key_value = Key_value;
       }
     }
-    else if(Button_value>'9')
-    {
-      switch(Button_value){
-        case A: //ANS
-          // Read the values of the buttons
-          total_value = result;
-          neorv32_uart0_print("Guardado el resultado anterior\n");
-        break;
 
-        case B://ADD
-          pADD=1;
-          operando1 = total_value;
-          total_value = 0;
-          pSUBS=0;
-          pPRO=0;
-          j=0;
-        break;    
+    
+
+    if(maquina_boton1()){ 
+         neorv32_uart0_printf("ESTAMOS EN EL BUCLE\n");
+      if(Key_value<=9)           //CON KEY_VALUE FUNCIONA, CON CARACTER VALUE NO XD, VER EL SIGUIENTE IF
+      {
+        neorv32_uart0_printf("ESTAMOS EN EL IF\n");
+        int decimal = 0;
+        decimal = caracter_value;
+        //q_caracter_value = caracter_value;
+       
+        total_value = total_value*10 +decimal;
+                
+        neorv32_uart0_printf("Has pulsado: %u\n",decimal);
+        neorv32_uart0_print("Total value: ");
+        neorv32_uart0_printf("%u\n",total_value);
         
-        case C://SUBSTRACTION
-          if(total_value==0)
-          {
-            sign=-1;
-          }
-          else{
-            pSUBS=1;
+      }
+
+      else if(caracter_value>9 && caracter_value<71)
+      {
+        neorv32_uart0_printf("ESTAMOS EN EL 2IF\n");   
+        switch(caracter_value){
+          case 65: //ANS
+            // Read the values of the buttons
+            total_value = result;
+            //j = 0;
+            //q_caracter_value = caracter_value;
+            neorv32_uart0_printf("Guardado el resultado anterior: \n",result);
+          break;
+
+          case 66://ADD
+            pADD=1;
             operando1 = total_value;
             total_value = 0;
-          }
-          pADD=0;
-          pPRO=0;
-          j=0;
-        break;
-        
-        case D://PRODUCT
-          pPRO=1;
-          operando1 = total_value;
-          total_value = 0;
-          pSUBS=0;
-          pADD=0;
-          j=0;
-        break;
+            pSUBS=0;
+            pPRO=0;
+            //j=0;
+            //q_caracter_value = caracter_value;
+            neorv32_uart0_print("+\n");
+          break;    
+          
+          case 67://SUBSTRACTION
+            if(total_value==0)
+            {
+              sign=-1;
+            }
+            else{
+              pSUBS=1;
+              operando1 = total_value;
+              total_value = 0;
+            }
+            pADD=0;
+            pPRO=0;
+            //j=0;
+            //q_caracter_value = caracter_value;
+            neorv32_uart0_print("-\n");
+          break;
+          
+          case 68://PRODUCT
+            pPRO=1;
+            operando1 = total_value;
+            total_value = 0;
+            pSUBS=0;
+            pADD=0;
+            //j=0;
+            //q_caracter_value = caracter_value;
+            neorv32_uart0_print("x\n");
+          break;
 
-        case E://AC  
-          neorv32_gpio_port_set(0x20); // Asynchronous Reset------------------------->Modify later to P2   
-          neorv32_gpio_port_set(0); // clear gpio output     
-          neorv32_uart0_print("Variables reseteadas\n");
-        break;
+          case 69://AC  
+            //neorv32_gpio_port_set(0x20); // Asynchronous Reset------------------------->Modify later to P2   
+            //neorv32_gpio_port_set(0); // clear gpio output   
+            total_value=0;
+            pSUBS=0;
+            pADD=0;
+            pPRO=0;
+            sign=1;
+            //j=0;
+            //q_caracter_value = caracter_value;
+              
+            neorv32_uart0_print("Variables reseteadas\n");
+          break;
 
-        case F://RESULT
-          if(pADD==1){result=sign*operando1+total_value;}
-          else if(pSUBS==1){result=sign*operando1-total_value;}
-          else if(pPRO==1){result=sign*operando1*total_value;}
-          total_value=0;
-          pSUBS=0;
-          pADD=0;
-          pPRO=0;
-          sign=1;
-          j=0;
-          neorv32_uart0_print("El resultado es: %d\n",result);
-        break;
+          case 70://RESULT
+            if(pADD==1){result=sign*operando1+total_value;}
+            else if(pSUBS==1){result=sign*operando1-total_value;}
+            else if(pPRO==1){result=sign*operando1*total_value;}
+            total_value=0;
+            pSUBS=0;
+            pADD=0;
+            pPRO=0;
+            sign=1;
+            //j=0;
+            //q_caracter_value = caracter_value;
+            neorv32_uart0_print("------------------------\n");
+            neorv32_uart0_printf("El resultado es: %u\n",result);
+          break;
+        }
+    
       }
-  
-   }
-    neorv32_cpu_delay_ms(500); // PARA NO PULSAR VARIAS VECES ANTES DE SOLUCIONARLO BIEN
+      
+     } //neorv32_cpu_delay_ms(500); // PARA NO PULSAR VARIAS VECES ANTES DE SOLUCIONARLO BIEN
+    
   }
 }
+
+uint8_t estadoB1=0;
+
+uint8_t maquina_boton1(void)
+{
+  uint8_t valor = Lee_teclado();
+    switch(estadoB1)
+    {
+    case 0:
+        if(valor != 0xFF)  
+        {
+          neorv32_uart0_printf("estadoB1=1\n");
+          estadoB1=1;
+          }
+        break;
+    case 1:
+        {estadoB1=2;}
+        break;
+    case 2:
+        if(valor == 0xFF) {estadoB1=0;}
+        break;
+        }
+    if(estadoB1==1) {return 1;}
+    return 0;
+}
+uint8_t Lee_teclado(void){
+  uint32_t Key_value = 0;
+  uint8_t Caracter = 0xFF;
+  
+  Key_value = neorv32_gpio_port_get();
+  Key_value = (Key_value >> 4);
+
+  if (Key_value & 0x0008) Caracter = 1;
+  else if (Key_value & 0x8000) Caracter = 2;
+  else if (Key_value & 0x0800) Caracter = 3;
+  else if (Key_value & 0x0080) Caracter = 65;
+  else if (Key_value & 0x0004) Caracter = 4;
+  else if (Key_value & 0x4000) Caracter = 5;
+  else if (Key_value & 0x0400) Caracter = 6;
+  else if (Key_value & 0x0040) Caracter = 66;
+  else if (Key_value & 0x0002) Caracter = 7;
+  else if (Key_value & 0x2000) Caracter = 8;
+  else if (Key_value & 0x0200) Caracter = 9;
+  else if (Key_value & 0x0020) Caracter = 67;
+  else if (Key_value & 0x0001) Caracter = 0;
+  else if (Key_value & 0x1000) Caracter = 70;
+  else if (Key_value & 0x0100) Caracter = 69;
+  else if (Key_value & 0x0010) Caracter = 68;
+  else Caracter = 0xFF;
+  return Caracter;
+};
+
