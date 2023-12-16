@@ -143,9 +143,6 @@ architecture neorv32_iCEBreaker_BoardTop_MinimalBoot_rtl of neorv32_iCEBreaker_B
   signal c_counter : unsigned (1 downto 0):="00";
   signal n_counter : unsigned (1 downto 0):="00";
 
-  signal c_en : std_logic := '1';
-  signal n_en : std_logic := '1';
-
   -- Signals for Wishbone --
   signal wb_tag_m2s   : std_ulogic_vector(2 downto 0);  -- Request tag
   signal wb_adr_m2s   : std_ulogic_vector(31 downto 0); -- Address
@@ -315,7 +312,7 @@ begin
   port map(
     clk_i     => std_ulogic(iCEBreakerv10_CLK),
     reset_i   => iCEBreakerv10_PMOD2_10_Button_3,
-    en_i      => c_en,
+    en_i      => '1',
 
     wb_tag_i  => wb_tag_m2s,     -- request tag
     wb_adr_i  => wb_adr_m2s,     -- address
@@ -358,11 +355,9 @@ begin
   begin
     if (iCEBreakerv10_PMOD2_10_Button_3) then --Reset
       c_button_val <= (others => '0'); 
-      c_en         <= '0';
   
     elsif (rising_edge(iCEBreakerv10_CLK)) then
       c_button_val <= n_button_val;
-      c_en         <= n_en;
 
     end if;
 
@@ -372,14 +367,11 @@ begin
   begin
  	-- Keep the state
   	n_button_val <= c_button_val; 
-    n_en <= c_en;
   	-- We are sending which buttom has been pushed
   	if (iCEBreakerv10_PMOD2_9_Button_1 = '1') then
 		n_button_val <= x"1";
-    n_en <= '0'; -- Desactive the peripheral
 	elsif (iCEBreakerv10_PMOD2_4_Button_2 = '1') then
 		n_button_val <= x"2";
-    n_en <= '1'; -- Active the peripheral
 	elsif (iCEBreakerv10_PMOD2_10_Button_3 = '1') then 
 		n_button_val <= x"3";
 

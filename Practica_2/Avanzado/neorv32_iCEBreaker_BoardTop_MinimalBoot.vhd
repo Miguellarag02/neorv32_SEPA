@@ -144,9 +144,6 @@ architecture neorv32_iCEBreaker_BoardTop_MinimalBoot_rtl of neorv32_iCEBreaker_B
   signal c_counter : unsigned (1 downto 0):="00";
   signal n_counter : unsigned (1 downto 0):="00";
 
-  signal c_en : std_logic := '0';
-  signal n_en : std_logic := '0';
-
   signal s_Key_value : std_logic_vector(15 downto 0);
 
 begin
@@ -303,7 +300,7 @@ begin
   port map(
     clk_i     => iCEBreakerv10_CLK,
     reset_i   => iCEBreakerv10_PMOD2_10_Button_3,
-    en_i      => c_en,
+    en_i      => '1',
     Row_1_i   => iCEBreakerv10_PMOD1B_7,
     Row_2_i   => iCEBreakerv10_PMOD1B_8, 
     Row_3_i   => iCEBreakerv10_PMOD1B_9,     
@@ -335,11 +332,9 @@ begin
   begin
     if (iCEBreakerv10_PMOD2_10_Button_3) then --Reset
       c_button_val <= (others => '0'); 
-      c_en <= '0';
   
     elsif (rising_edge(iCEBreakerv10_CLK)) then
       c_button_val <= n_button_val;
-      c_en         <= n_en;
 
     end if;
 
@@ -349,13 +344,11 @@ begin
   begin
  	-- Keep the state
   	n_button_val <= c_button_val; 
-    n_en <= c_en;
   	-- We are sending which buttom has been pushed
   	if (iCEBreakerv10_PMOD2_9_Button_1 = '1') then
 		n_button_val <= x"1";
 	elsif (iCEBreakerv10_PMOD2_4_Button_2 = '1') then
 		n_button_val <= x"2";
-    n_en <= '0';
 	elsif (iCEBreakerv10_PMOD2_10_Button_3 = '1') then 
 		n_button_val <= x"3";
 	end if;  
