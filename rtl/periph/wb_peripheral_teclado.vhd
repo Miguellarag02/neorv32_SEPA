@@ -10,9 +10,8 @@ use neorv32.neorv32_package.all;
 entity wb_peripheral_teclado is
   generic(
     WB_ADDR_BASE        : std_ulogic_vector(31 downto 0) := x"90000000";
-    WB_ADDR_SIZE        : integer := 20
+    WB_ADDR_SIZE        : integer := 0x10
   );
-      -- Top-level ports. Board pins are defined in setups/osflow/constraints/iCEBreaker.pcf
   port (
     -- 12MHz Clock input
     clk_i                : in std_ulogic;
@@ -49,12 +48,6 @@ end entity;
 
 architecture wb_peripheral_rtl of wb_peripheral_teclado is
 
-
-    type state_t is(
-		IDLE,
-		WB_WRITE_REG,
-		END_TX
-		);
 
     -- internal constants --
     constant addr_mask_c : std_ulogic_vector(31 downto 0) := std_ulogic_vector(to_unsigned(WB_ADDR_SIZE-1, 32));

@@ -297,7 +297,7 @@ begin
   gpio_i <= x"000000000000000" & c_button_val;
   
   
-  Buttom_val_Register: process(iCEBreakerv10_CLK,n_button_val,Reset_signal)
+  Buttom_val_Register: process(iCEBreakerv10_CLK,Reset_signal)
   begin
   	-- Asynchronous reset
   	if(Reset_signal = '1') then
@@ -308,11 +308,15 @@ begin
   	
   end process;
   
-  State_Buttom: process(iCEBreakerv10_PMOD2_9_Button_1,iCEBreakerv10_PMOD2_4_Button_2,iCEBreakerv10_PMOD2_10_Button_3,c_button_val)
+  State_Buttom: process(
+    iCEBreakerv10_PMOD2_9_Button_1,
+    iCEBreakerv10_PMOD2_4_Button_2,
+    iCEBreakerv10_PMOD2_10_Button_3,
+    c_button_val
+    )
   begin
  	-- Keep the state
   	n_button_val <= c_button_val; 
-  	
   	-- We are sending which buttom has been pushed
   	if (iCEBreakerv10_PMOD2_9_Button_1 = '1') then
 		n_button_val <= x"1";
