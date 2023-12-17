@@ -88,7 +88,7 @@ int main() {
 
   // init UART (primary UART = UART0; if no id number is specified the primary UART is used) at default baud rate, no parity bits, ho hw flow control
   neorv32_uart0_setup(BAUD_RATE, PARITY_NONE, FLOW_CONTROL_NONE);
-  neorv32_cpu_store_unsigned_word (WB_BASE_ADDRESS + WB_REG3_OFFSET, 2222);
+  
 
   // check if GPIO unit is implemented at all
   if (neorv32_gpio_available() == 0) {
@@ -103,37 +103,53 @@ int main() {
   uint8_t Key_value = 0xFF; 
   uint8_t q_key_value = 0xFF;
   int total_value = 0;
+  neorv32_cpu_store_unsigned_word (WB_BASE_ADDRESS + WB_REG1_OFFSET, 0x00000000);
+  neorv32_cpu_store_unsigned_word (WB_BASE_ADDRESS + WB_REG2_OFFSET, 0x00000000);
+  neorv32_cpu_store_unsigned_word (WB_BASE_ADDRESS + WB_REG3_OFFSET, 0x000008AE);
+  
 
   while(1){
+    int registro0 = neorv32_cpu_load_unsigned_word (WB_BASE_ADDRESS + WB_REG0_OFFSET);   
+    int registro1 = neorv32_cpu_load_unsigned_word (WB_BASE_ADDRESS + WB_REG1_OFFSET);   
+    int registro2 = neorv32_cpu_load_unsigned_word (WB_BASE_ADDRESS + WB_REG2_OFFSET);   
+    int registro3 = neorv32_cpu_load_unsigned_word (WB_BASE_ADDRESS + WB_REG3_OFFSET);
+    
+
+
     Key_value = Lee_teclado();
     if(Key_value != 0xFF){
+      
       if(Key_value != q_key_value){
-        neorv32_uart0_print("\nSe ha pulsado la tecla: ");
         if(Key_value < 10){
-           neorv32_uart0_printf("%u\n",Key_value);
            int decimal = 0;
            decimal = Key_value;
            total_value = total_value*10 + decimal;
-          neorv32_uart0_printf("Contraseña: %u\n",total_value);
-          neorv32_cpu_store_unsigned_word (WB_BASE_ADDRESS + WB_REG1_OFFSET, total_value);
+           neorv32_uart0_printf("Clave introducida: %u\n",total_value);
+           neorv32_cpu_store_unsigned_word (WB_BASE_ADDRESS + WB_REG1_OFFSET, total_value);
+        }
 
-                }
+            
         else if(Key_value > 64 && Key_value < 71){
-           neorv32_uart0_printf("%c\n",Key_value);
            if(Key_value == 70)
            {
+            neorv32_uart0_print("Cambio de clave realizado\n");
             neorv32_cpu_store_unsigned_word (WB_BASE_ADDRESS + WB_REG3_OFFSET, total_value);
+            total_value = 0;
+            
            }
            else if(Key_value == 69)
            {
+            neorv32_uart0_print("Comprobacion de la clave\n");
             neorv32_cpu_store_unsigned_word (WB_BASE_ADDRESS + WB_REG2_OFFSET, 0x00000001);
+            total_value = 0;
+            compara_valores();
            }
-          //IMPORTANTE-->Preguntar a Lara si puedeo hacer el registro 2 de lectura/escritura y asi creo una funcion a parte
-          //para comparar los registros 1 y 3 solamente cuando el registro 2 valga 1
-          //La otra opción es crear un flag y simplemente meter un if donde compararlo.
-
         }
         q_key_value = Key_value;
+        neorv32_uart0_printf("Reg0: %u\n",registro0);
+        neorv32_uart0_printf("Reg1: %u\n",registro1);
+        neorv32_uart0_printf("Reg2: %u\n",registro2);
+        neorv32_uart0_printf("Reg3: %u\n",registro3);
       }
     }
     else{
@@ -181,20 +197,24 @@ uint8_t compara_valores(void){
     // Read the key value:
     if(introducido == password)
     {
-      neorv32_uart0_print("\nContrseña correcta");
+      neorv32_uart0_print("\nCLave correcta\n");
       // Reset the register 1
       neorv32_cpu_store_unsigned_word (WB_BASE_ADDRESS + WB_REG2_OFFSET, 0x00000000); 
+      neorv32_cpu_store_unsigned_word (WB_BASE_ADDRESS + WB_REG1_OFFSET, 0x00000000);
+      
       neorv32_gpio_port_set(0x0F);
-      neorv32_cpu_delay_ms(500);
+      neorv32_cpu_delay_ms(1000);
       neorv32_gpio_port_set(0x00);
     }
     else
     {
-      neorv32_uart0_print("\nContrseña incorrecta");
+      neorv32_uart0_print("\nClave incorrecta\n");
       // Reset the register 1
       neorv32_cpu_store_unsigned_word (WB_BASE_ADDRESS + WB_REG2_OFFSET, 0x00000000);
+      neorv32_cpu_store_unsigned_word (WB_BASE_ADDRESS + WB_REG1_OFFSET, 0x00000000);
+      
       neorv32_gpio_port_set(0x10);
-      neorv32_cpu_delay_ms(500);
+      neorv32_cpu_delay_ms(1000);
       neorv32_gpio_port_set(0x00);
     }
     

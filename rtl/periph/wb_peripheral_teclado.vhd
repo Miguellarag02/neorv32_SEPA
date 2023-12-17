@@ -74,9 +74,6 @@ architecture wb_peripheral_rtl of wb_peripheral_teclado is
     signal c_key            : std_ulogic_vector(15 downto 0); -- Update each cycle
     signal n_key            : std_ulogic_vector(15 downto 0);
 
-    signal c_state_tx       : state_t;
-    signal n_state_tx       : state_t;
-
     signal c_col            : std_ulogic_vector(3 downto 0);
     signal n_col            : std_ulogic_vector(3 downto 0);
 
