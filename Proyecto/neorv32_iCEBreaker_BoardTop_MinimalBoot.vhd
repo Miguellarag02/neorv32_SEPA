@@ -320,7 +320,7 @@ begin
 
   peripheral_teclado_0: entity neorv32.wb_peripheral_teclado
   generic map(WB_ADDR_BASE   => x"90000000",
-              WB_ADDR_SIZE   => 20 )    
+              WB_ADDR_SIZE   => 32 )    
   port map(
     clk_i     => std_ulogic(iCEBreakerv10_CLK),
     reset_i   => iCEBreakerv10_PMOD2_10_Button_3,
@@ -349,8 +349,8 @@ begin
     );
 
     peripheral_7segmentDisplay: entity neorv32.wb_7segmentDisplay
-    generic map(WB_ADDR_BASE   => x"90000014",
-                WB_ADDR_SIZE   => 12 )    
+    generic map(WB_ADDR_BASE   => x"90000020",
+                WB_ADDR_SIZE   => 16 )    
     port map(
       clk_i     => std_ulogic(iCEBreakerv10_CLK),
       reset_i   => iCEBreakerv10_PMOD2_10_Button_3,

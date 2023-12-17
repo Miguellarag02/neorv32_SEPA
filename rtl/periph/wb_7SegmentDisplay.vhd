@@ -9,8 +9,8 @@ use neorv32.neorv32_package.all;
 
 entity wb_7segmentDisplay is
   generic(
-    WB_ADDR_BASE        : std_ulogic_vector(31 downto 0) := x"90000014";
-    WB_ADDR_SIZE        : integer := 12
+    WB_ADDR_BASE        : std_ulogic_vector(31 downto 0) := x"90000020";
+    WB_ADDR_SIZE        : integer := 16
   );
       -- Top-level ports. Board pins are defined in setups/osflow/constraints/iCEBreaker.pcf
   port (
