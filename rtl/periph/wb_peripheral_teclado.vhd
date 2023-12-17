@@ -10,7 +10,7 @@ use neorv32.neorv32_package.all;
 entity wb_peripheral_teclado is
   generic(
     WB_ADDR_BASE        : std_ulogic_vector(31 downto 0) := x"90000000";
-    WB_ADDR_SIZE        : integer := 0x10
+    WB_ADDR_SIZE        : integer := x"10"
   );
   port (
     -- 12MHz Clock input
