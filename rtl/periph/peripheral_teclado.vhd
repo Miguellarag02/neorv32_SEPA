@@ -4,7 +4,6 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity peripheral_teclado is
-      -- Top-level ports. Board pins are defined in setups/osflow/constraints/iCEBreaker.pcf
   port (
     -- 12MHz Clock input
     clk_i                : in std_logic;
