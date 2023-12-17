@@ -84,7 +84,13 @@ architecture peripheral_rtl of peripheral_teclado is
     -- Read key processs                                ---
     -------------------------------------------------------
 
-    peripheral_teclado_decode: process(c_counter, s_row, c_col, c_key, c_key_value)
+    peripheral_teclado_decode: process(
+        c_counter, 
+        s_row, 
+        c_col, 
+        c_key, 
+        c_key_value
+        )
     begin
         n_key       <= c_key;
         n_col       <= (others => '0');
