@@ -12,6 +12,7 @@ entity wb_peripheral_teclado is
     WB_ADDR_BASE        : std_ulogic_vector(31 downto 0) := x"90000000";
     WB_ADDR_SIZE        : integer := 32
   );
+      -- Top-level ports. Board pins are defined in setups/osflow/constraints/iCEBreaker.pcf
   port (
     -- 12MHz Clock input
     clk_i                : in std_ulogic;
@@ -49,6 +50,12 @@ end entity;
 architecture wb_peripheral_rtl of wb_peripheral_teclado is
 
 
+    type state_t is(
+		IDLE,
+		WB_WRITE_REG,
+		END_TX
+		);
+
     -- internal constants --
     constant addr_mask_c : std_ulogic_vector(31 downto 0) := std_ulogic_vector(to_unsigned(WB_ADDR_SIZE-1, 32));
     constant all_zero_c  : std_ulogic_vector(31 downto 0) := (others => '0');
@@ -73,6 +80,9 @@ architecture wb_peripheral_rtl of wb_peripheral_teclado is
 
     signal c_key            : std_ulogic_vector(15 downto 0); -- Update each cycle
     signal n_key            : std_ulogic_vector(15 downto 0);
+
+    signal c_state_tx       : state_t;
+    signal n_state_tx       : state_t;
 
     signal c_col            : std_ulogic_vector(3 downto 0);
     signal n_col            : std_ulogic_vector(3 downto 0);
@@ -126,6 +136,7 @@ architecture wb_peripheral_rtl of wb_peripheral_teclado is
             c_reg2      <= (others => '0');
             c_reg3      <= (others => '0');
             c_reg4      <= (others => '0');
+            c_Password_result <= (others => '0');
 
         elsif ( rising_edge(clk_i)) then
             c_counter   <= n_counter;
@@ -137,6 +148,7 @@ architecture wb_peripheral_rtl of wb_peripheral_teclado is
             c_reg2      <= n_reg2; -- Storage the controls signals
             c_reg3      <= n_reg3; -- Storage the real password
             c_reg4      <= n_reg4; -- Storage the AND result between the user and the real password
+            c_Password_result <= n_Password_result;
 
         end if;
     end process;
@@ -214,7 +226,7 @@ architecture wb_peripheral_rtl of wb_peripheral_teclado is
         n_reg1 <= c_reg1;
         n_reg2 <= c_reg2;
         n_reg3 <= c_reg3;
-        n_reg4 <= c_reg4;
+        n_reg4 <= x"0000000" & c_Password_result;
 
         if (c_reg2(7 downto 0) = x"10") then -- New Password
             n_reg2 <= (others => '0');

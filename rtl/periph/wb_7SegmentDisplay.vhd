@@ -244,7 +244,8 @@ architecture wb_7segmentDisplay_rtl of wb_7segmentDisplay is
                         "0001110" when x"040", -- 7
                         "1111111" when x"080", -- 8
                         "0011111" when x"100", -- 9
-                        "0111110" when x"200", -- N
+                        "1111000" when x"200", -- C
+                        "1110000" when x"400", -- L
                         "0111101" when others; -- P
 
 
