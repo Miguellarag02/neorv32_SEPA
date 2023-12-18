@@ -57,6 +57,7 @@
 #define WB_DISPLAY_REG1_OFFSET 0x04
 #define WB_DISPLAY_REG2_OFFSET 0x08
 
+
 /**********************************************************************//**
  * @name User configuration
  **************************************************************************/
@@ -87,6 +88,10 @@ extern void blink_led_asm(uint32_t gpio_out_addr);
  * C function to read the Keypad
  **************************************************************************/
 uint8_t Lee_teclado(void);
+
+/**********************************************************************//**
+ * C function to represent in the 7 segment display
+ **************************************************************************/
 void Represent_Display(uint8_t Decenas, uint8_t Centenas, uint8_t Enable);
 
 
@@ -94,7 +99,7 @@ int main() {
 
   // init UART (primary UART = UART0; if no id number is specified the primary UART is used) at default baud rate, no parity bits, ho hw flow control
   neorv32_uart0_setup(BAUD_RATE, PARITY_NONE, FLOW_CONTROL_NONE);
-  
+
 
   // check if GPIO unit is implemented at all
   if (neorv32_gpio_available() == 0) {
@@ -108,200 +113,33 @@ int main() {
 
   uint8_t Key_value = 0xFF; 
   uint8_t q_key_value = 0xFF;
-  uint32_t total_value = 0;
-  int estado = 10;
-  int decena = 0;
-  neorv32_cpu_store_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG0_OFFSET, 0x00000000);
-  neorv32_cpu_store_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG1_OFFSET, 0x00000000);
-  neorv32_cpu_store_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG2_OFFSET, 0x00000000);
-  neorv32_cpu_store_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG4_OFFSET, 0x00000000);
-  neorv32_cpu_store_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG3_OFFSET, 0x000B0B0B);
-  
-  
 
   while(1){
-    //uint32_t registro0 = neorv32_cpu_load_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG0_OFFSET);   
-    uint32_t registro1 = neorv32_cpu_load_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG1_OFFSET);   
-    uint32_t registro2 = neorv32_cpu_load_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG2_OFFSET);   
-    //uint32_t registro3 = neorv32_cpu_load_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG3_OFFSET);
-    uint32_t registro4 = neorv32_cpu_load_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG4_OFFSET);
-   
-    
+    Key_value = Lee_teclado();
+    if(Key_value != 0xFF){
+      if(Key_value != q_key_value){
+        neorv32_uart0_print("\nSe ha pulsado la tecla: ");
+        if(Key_value < 10){
+           neorv32_uart0_printf("%u",Key_value);
+        }
+        else if(Key_value > 64 && Key_value < 71){
+           neorv32_uart0_printf("%c",Key_value);
+        }
+        q_key_value = Key_value;
+        // Represent key
+        Represent_Display(Key_value,0,1);
+      }
+    }
+    else{
+      q_key_value = 0xFF;
+    }
 
-      switch(estado)
-      {
-        case 10:
-          if(registro4 == 0xF)
-          {
-            Represent_Display(0,12,1);
-            neorv32_gpio_port_set(0x0F);
-            neorv32_cpu_delay_ms(3000);
-            neorv32_gpio_port_set(0x00);
-            Represent_Display(0,12,0);
-          }
-          else{
-            Key_value = Lee_teclado();
-            if(Key_value != 0xFF){
-              if(Key_value != q_key_value){
-              neorv32_uart0_print("Funciona 4\n");
-                if(Key_value < 10){estado=0;}
-                else{estado = Key_value;} 
-                q_key_value = Key_value;
-              }            
-            }
-            else{q_key_value = 0xFF;}
-          }
-        break;
-
-        case 0:  //Number
-          neorv32_uart0_print("Funciona 5\n");
-          Represent_Display(decena,Key_value,1);
-          total_value=(total_value<<4)+Key_value;
-          total_value = total_value & 0xFF;
-          decena = Key_value;
-          estado = 10;
-        break;
-
-        case 65:  //A
-          neorv32_uart0_print("Funciona 6\n");
-          registro1 = neorv32_cpu_load_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG1_OFFSET);
-          registro1 = registro1+total_value;
-          neorv32_cpu_store_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG1_OFFSET, registro1);
-
-          registro2 = neorv32_cpu_load_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG2_OFFSET);
-          registro2 = registro2 + 2;
-          neorv32_cpu_store_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG2_OFFSET, registro2);
-
-          estado = 1;
-        break;
-
-        case 66:  //B
-          neorv32_uart0_print("Funciona 7\n");
-          registro1 = neorv32_cpu_load_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG1_OFFSET);
-          registro1 = registro1+(total_value<<8);
-          neorv32_cpu_store_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG1_OFFSET, registro1);
-
-          registro2 = neorv32_cpu_load_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG2_OFFSET);
-          registro2 = registro2 + 2;
-          neorv32_cpu_store_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG2_OFFSET, registro2);
-
-          estado = 2;
-        break;
-
-        case 67:  //C
-        neorv32_uart0_print("Funciona 8\n");
-          registro1 = neorv32_cpu_load_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG1_OFFSET);
-          registro1 = registro1+(total_value<<16);
-          neorv32_cpu_store_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG1_OFFSET, registro1);
-
-          registro2 = neorv32_cpu_load_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG2_OFFSET);
-          registro2 = registro2 + 4;
-          neorv32_cpu_store_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG2_OFFSET, registro2);
-
-          estado = 3;
-        break;
-
-        case 68:  //D
-        neorv32_uart0_print("Funciona 9\n");
-          registro1 = neorv32_cpu_load_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG1_OFFSET);
-          registro1 = registro1+(total_value<<24);
-          neorv32_cpu_store_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG1_OFFSET, registro1);
-
-          registro2 = neorv32_cpu_load_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG2_OFFSET);
-          registro2 = registro2 + 8;
-          neorv32_cpu_store_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG2_OFFSET, registro2);
-
-          estado = 4;
-        break;
-
-        case 1:  //Check A protocol
-          registro4 = neorv32_cpu_load_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG4_OFFSET);
-          if((registro4 & 1) != 0)
-          {
-            neorv32_uart0_print("\nClave A correcta\n");
-            neorv32_gpio_port_set(0x01);
-            neorv32_cpu_delay_ms(2000);
-            neorv32_gpio_port_set(0x00);
-            total_value=0;
-            estado = 10;
-          }
-          else
-          {
-            total_value=0;
-            estado = 5;
-          }
-        break;
-
-        case 2:  //Check B protocol
-          registro4 = neorv32_cpu_load_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG4_OFFSET);
-          if((registro4 & 2) != 0)
-          {
-            neorv32_uart0_print("\nClave B correcta\n");
-            neorv32_gpio_port_set(0x02);
-            neorv32_cpu_delay_ms(2000);
-            neorv32_gpio_port_set(0x00);
-            total_value=0;
-            estado = 10;
-          }
-          else
-          {
-            total_value=0;
-            estado = 5;
-          }
-        break;
-
-        case 3:  //Check C protocol
-          registro4 = neorv32_cpu_load_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG4_OFFSET);
-          if((registro4 & 4) != 0)
-          {
-            neorv32_uart0_print("\nClave C correcta\n");
-            neorv32_gpio_port_set(0x04);
-            neorv32_cpu_delay_ms(2000);
-            neorv32_gpio_port_set(0x00);
-            total_value=0;
-            estado = 10;
-          }
-          else
-          {
-            total_value=0;
-            estado = 5;
-          }
-        break;
-
-        case 4:  //Check D protocol
-          registro4 = neorv32_cpu_load_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG4_OFFSET);
-          if((registro4 & 8) != 0)
-          {
-            neorv32_uart0_print("\nClave D correcta\n");
-            neorv32_gpio_port_set(0x08);
-            neorv32_cpu_delay_ms(2000);
-            neorv32_gpio_port_set(0x00);
-            total_value=0;
-            estado = 10;
-          }
-          else
-          {
-            total_value=0;
-            estado = 5;
-          }
-        break;
-
-        case 5: //Fail
-          neorv32_uart0_print("\nClave incorrecta->Claves reseteadas\n");  
-          Represent_Display(10,11,1);        
-          neorv32_gpio_port_set(0x10);
-          neorv32_cpu_delay_ms(3000);
-          neorv32_gpio_port_set(0x00);
-          neorv32_gpio_port_set(0x20);
-          estado = 10;
-
-        break;
-      } 
- 
-  
   }
   return 0;
-}  
+}
+
+
+
 
 uint8_t Lee_teclado(void){
   uint32_t Key_value = 0;
@@ -322,7 +160,6 @@ uint8_t Lee_teclado(void){
     // Reset the register 0
       neorv32_cpu_store_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG0_OFFSET, 0x00000000); 
   }
-
   return Caracter;
 };
 
@@ -332,14 +169,14 @@ void Represent_Display(uint8_t Decenas, uint8_t Centenas, uint8_t Enable){
   uint16_t Mask;
   uint8_t i;
 
-  for (i=3, Mask = 0x0004, FPGA_display = Decenas ; i<13 ; i++){
+  for (i=3, Mask = 0x0004, FPGA_display = Decenas ; i<12 ; i++){
     FPGA_display = Decenas == i ? Mask : FPGA_display;
     Mask = (Mask << 1);
   }
 
   neorv32_cpu_store_unsigned_word (WB_DISPLAY_BASE_ADDRESS + WB_DISPLAY_REG0_OFFSET,  FPGA_display); // Escribo Decenas
   
-    for (i=3, Mask = 0x0004, FPGA_display = Centenas ; i<13 ; i++){
+    for (i=3, Mask = 0x0004, FPGA_display = Centenas ; i<12 ; i++){
     FPGA_display = Centenas == i ? Mask : FPGA_display;
     Mask = (Mask << 1);
   }
@@ -352,4 +189,5 @@ void Represent_Display(uint8_t Decenas, uint8_t Centenas, uint8_t Enable){
   else{
     neorv32_cpu_store_unsigned_word (WB_DISPLAY_BASE_ADDRESS + WB_DISPLAY_REG2_OFFSET, 0x00000000); // Indico que escriba el valor en el display    
   }
-};
+
+}
