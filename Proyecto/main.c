@@ -107,11 +107,16 @@ int main() {
   neorv32_uart0_print("Program iniciated\n");
 
   uint8_t Key_value = 0xFF;
-  uint8_t num = 0; 
   uint8_t q_key_value = 0xFF;
   uint32_t total_value = 0;
   int estado = 10;
   int decena = 0;
+  uint8_t led1 = 0x01;
+  uint8_t led2 = 0x02;
+  uint8_t led3 = 0x04;
+  uint8_t led4 = 0x08;
+  uint8_t v_gpio = 0x00;
+
   neorv32_cpu_store_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG0_OFFSET, 0x00000000);
   neorv32_cpu_store_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG1_OFFSET, 0x00000000);
   neorv32_cpu_store_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG2_OFFSET, 0x00000000);
@@ -121,6 +126,7 @@ int main() {
   
 
   while(1){
+    //to know always whats happening on the registers
     uint32_t registro0 = neorv32_cpu_load_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG0_OFFSET);   
     uint32_t registro1 = neorv32_cpu_load_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG1_OFFSET);   
     uint32_t registro2 = neorv32_cpu_load_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG2_OFFSET);   
@@ -131,20 +137,23 @@ int main() {
 
       switch(estado)
       {
-        case 10:
+        case 10: //Initial case-->waiting for caracters
           if(registro4 == 0xF)
           {
+            neorv32_cpu_store_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG4_OFFSET,0x00000000);
+            neorv32_uart0_printf("\nPuerta abierta, tiene 5s...\n");
             Represent_Display(0,12,1);
-            neorv32_gpio_port_set(0x0F);
-            neorv32_cpu_delay_ms(3000);
+            neorv32_cpu_delay_ms(5000);
+            v_gpio = 0x00;
+            neorv32_gpio_port_set(0x20);
             neorv32_gpio_port_set(0x00);
             Represent_Display(0,12,0);
           }
           else{
+            //New pulse on the keypad
             Key_value = Lee_teclado();
             if(Key_value != 0xFF){
               if(Key_value != q_key_value){
-              neorv32_uart0_print("Funciona 4\n");
                 if(Key_value < 10){estado=0;}
                 else{estado = Key_value;} 
                 q_key_value = Key_value;
@@ -155,19 +164,14 @@ int main() {
         break;
 
         case 0:  //Number
-          num = (decena<<4)+Key_value;
-          neorv32_uart0_print("Funciona 5\n");
-          Represent_Display(decena,Key_value,1);
-          total_value=(total_value<<4)+Key_value;
-          total_value = total_value & 0xFF;
+          Represent_Display(decena,Key_value,1);  //Displays the numbers
+          total_value=(total_value<<4)+Key_value;   //Move units to tens
+          total_value = total_value & 0xFF; //Take only last numbers and discard the rest
           neorv32_uart0_printf("Total_value: %x\n",total_value);
-          neorv32_uart0_printf("num: %x\n",num);
-          neorv32_uart0_printf("Decena: %\n",decena);
-          neorv32_uart0_printf("UNidad: %x\n",Key_value);
           decena = Key_value;
           estado = 10;
 
-
+          //Show registers to see how it works easier
           neorv32_uart0_printf("Registro 1: %x\n",registro1);
           neorv32_uart0_printf("Registro 2: %x\n",registro2);
           neorv32_uart0_printf("Registro 3: %x\n",registro3);
@@ -176,10 +180,10 @@ int main() {
 
         break;
 
+        //Case 65-69 only for letters
         case 65:  //A
-          neorv32_uart0_print("Funciona 6\n");
           registro1 = neorv32_cpu_load_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG1_OFFSET);
-          registro1 = registro1+total_value;
+          registro1 = registro1+total_value;  
           neorv32_cpu_store_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG1_OFFSET, registro1);
 
           registro2 = neorv32_cpu_load_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG2_OFFSET);
@@ -190,20 +194,18 @@ int main() {
         break;
 
         case 66:  //B
-          neorv32_uart0_print("Funciona 7\n");
           registro1 = neorv32_cpu_load_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG1_OFFSET);
-          registro1 = registro1+(total_value<<8);
+          registro1 = registro1+(total_value<<8); //Writing on the correct position of the protocol specified
           neorv32_cpu_store_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG1_OFFSET, registro1);
 
           registro2 = neorv32_cpu_load_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG2_OFFSET);
-          registro2 = registro2 + 2;
+          registro2 = registro2 + 2;  //Signal to hardware to know we want to compare passwords
           neorv32_cpu_store_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG2_OFFSET, registro2);
 
           estado = 2;
         break;
 
         case 67:  //C
-        neorv32_uart0_print("Funciona 8\n");
           registro1 = neorv32_cpu_load_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG1_OFFSET);
           registro1 = registro1+(total_value<<16);
           neorv32_cpu_store_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG1_OFFSET, registro1);
@@ -216,7 +218,6 @@ int main() {
         break;
 
         case 68:  //D
-        neorv32_uart0_print("Funciona 9\n");
           registro1 = neorv32_cpu_load_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG1_OFFSET);
           registro1 = registro1+(total_value<<24);
           neorv32_cpu_store_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG1_OFFSET, registro1);
@@ -228,15 +229,27 @@ int main() {
           estado = 4;
         break;
 
+        case 69:  //E-->Reset
+          neorv32_gpio_port_set(0x20);  //General reset except to reg3
+          neorv32_gpio_port_set(0x00);
+          neorv32_cpu_store_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG3_OFFSET, 0x00555555);
+          v_gpio = 0x00;
+          estado = 10;
+          neorv32_uart0_print("\nVariables y claves reseteadas\n");
+        break;
+
         case 1:  //Check A protocol
           neorv32_cpu_delay_ms(500);
           registro4 = neorv32_cpu_load_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG4_OFFSET);
-          if((registro4 & 1) != 0)
+          if((registro4 & 1) != 0) //Condition specified on hardware
           {
             neorv32_uart0_print("\nClave A correcta\n");
-            neorv32_gpio_port_set(0x01);
-            neorv32_cpu_delay_ms(2000);
-            neorv32_gpio_port_set(0x00);
+            v_gpio = v_gpio+ led1;  //To not disturb other leds
+            neorv32_gpio_port_set(v_gpio);
+            neorv32_cpu_delay_ms(1000);
+            Represent_Display(10,11,0);
+            decena = 0;
+            Key_value = 0xFF;
             total_value=0;
             estado = 10;
           }
@@ -253,9 +266,12 @@ int main() {
           if((registro4 & 2) != 0)
           {
             neorv32_uart0_print("\nClave B correcta\n");
-            neorv32_gpio_port_set(0x02);
-            neorv32_cpu_delay_ms(2000);
-            neorv32_gpio_port_set(0x00);
+            v_gpio = v_gpio+ led2;
+            neorv32_gpio_port_set(v_gpio);
+            neorv32_cpu_delay_ms(1000);
+            Represent_Display(10,11,0); 
+            decena = 0;
+            Key_value = 0xFF;
             total_value=0;
             estado = 10;
           }
@@ -271,9 +287,12 @@ int main() {
           if((registro4 & 4) != 0)
           {
             neorv32_uart0_print("\nClave C correcta\n");
-            neorv32_gpio_port_set(0x04);
-            neorv32_cpu_delay_ms(2000);
-            neorv32_gpio_port_set(0x00);
+            v_gpio = v_gpio+ led3;
+            neorv32_gpio_port_set(v_gpio);
+            neorv32_cpu_delay_ms(1000);
+            Represent_Display(10,11,0); 
+            decena = 0;
+            Key_value = 0xFF;
             total_value=0;
             estado = 10;
           }
@@ -289,9 +308,12 @@ int main() {
           if((registro4 & 8) != 0)
           {
             neorv32_uart0_print("\nClave D correcta\n");
-            neorv32_gpio_port_set(0x08);
-            neorv32_cpu_delay_ms(2000);
-            neorv32_gpio_port_set(0x00);
+            v_gpio = v_gpio+ led4;
+            neorv32_gpio_port_set(v_gpio);
+            neorv32_cpu_delay_ms(1000);
+            Represent_Display(10,11,0); 
+            decena = 0;
+            Key_value = 0xFF;
             total_value=0;
             estado = 10;
           }
@@ -304,11 +326,17 @@ int main() {
 
         case 5: //Fail
           neorv32_uart0_print("\nClave incorrecta->Claves reseteadas\n");  
-          Represent_Display(10,12,1);        
-          neorv32_gpio_port_set(0x10);
+          Represent_Display(10,11,1);  //-->CL   
+          neorv32_gpio_port_set(0x10);  //Red led
           neorv32_cpu_delay_ms(3000);
-          //neorv32_gpio_port_set(0x20);
+          neorv32_gpio_port_set(0x20); //General reset except to reg3
           neorv32_gpio_port_set(0x00);
+          neorv32_cpu_store_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG3_OFFSET, 0x00555555);
+          Represent_Display(10,11,0); //-->--
+          v_gpio = 0x00;
+          decena = 0;
+          Key_value = 0xFF;
+          total_value=0;
           estado = 10;
 
         break;
@@ -353,19 +381,19 @@ void Represent_Display(uint8_t Decenas, uint8_t Centenas, uint8_t Enable){
     Mask = (Mask << 1);
   }
 
-  neorv32_cpu_store_unsigned_word (WB_DISPLAY_BASE_ADDRESS + WB_DISPLAY_REG0_OFFSET,  FPGA_display); // Escribo Decenas
+  neorv32_cpu_store_unsigned_word (WB_DISPLAY_BASE_ADDRESS + WB_DISPLAY_REG0_OFFSET,  FPGA_display); // Write tens
   
     for (i=3, Mask = 0x0004, FPGA_display = Centenas ; i<13 ; i++){
     FPGA_display = Centenas == i ? Mask : FPGA_display;
     Mask = (Mask << 1);
   }
   
-  neorv32_cpu_store_unsigned_word (WB_DISPLAY_BASE_ADDRESS + WB_DISPLAY_REG1_OFFSET,  FPGA_display); // Escribo Centenas
+  neorv32_cpu_store_unsigned_word (WB_DISPLAY_BASE_ADDRESS + WB_DISPLAY_REG1_OFFSET,  FPGA_display); // Write units
 
   if(Enable != 0){
-      neorv32_cpu_store_unsigned_word (WB_DISPLAY_BASE_ADDRESS + WB_DISPLAY_REG2_OFFSET, 0x00000001); // Indico que escriba el valor en el display
+      neorv32_cpu_store_unsigned_word (WB_DISPLAY_BASE_ADDRESS + WB_DISPLAY_REG2_OFFSET, 0x00000001); // Order to write on display
   }
   else{
-    neorv32_cpu_store_unsigned_word (WB_DISPLAY_BASE_ADDRESS + WB_DISPLAY_REG2_OFFSET, 0x00000000); // Indico que escriba el valor en el display    
+    neorv32_cpu_store_unsigned_word (WB_DISPLAY_BASE_ADDRESS + WB_DISPLAY_REG2_OFFSET, 0x00000000); // Order to write on display    
   }
 };
