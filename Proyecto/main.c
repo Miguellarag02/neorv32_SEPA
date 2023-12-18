@@ -45,11 +45,18 @@
 /************************************************************************//**
  * DEFINES :
  * *************************************************************************/
-#define WB_BASE_ADDRESS 0x90000000
-#define WB_REG0_OFFSET 0x00
-#define WB_REG1_OFFSET 0x04
-#define WB_REG2_OFFSET 0x08
-#define WB_REG3_OFFSET 0x0C
+#define WB_TECLADO_BASE_ADDRESS 0x90000000
+#define WB_TECLADO_REG0_OFFSET 0x00
+#define WB_TECLADO_REG1_OFFSET 0x04
+#define WB_TECLADO_REG2_OFFSET 0x08
+#define WB_TECLADO_REG3_OFFSET 0x0C
+#define WB_TECLADO_REG4_OFFSET 0x10
+
+#define WB_DISPLAY_BASE_ADDRESS 0x90000020 
+#define WB_DISPLAY_REG0_OFFSET 0x00
+#define WB_DISPLAY_REG1_OFFSET 0x04
+#define WB_DISPLAY_REG2_OFFSET 0x08
+
 
 /**********************************************************************//**
  * @name User configuration
@@ -81,6 +88,11 @@ extern void blink_led_asm(uint32_t gpio_out_addr);
  * C function to read the Keypad
  **************************************************************************/
 uint8_t Lee_teclado(void);
+
+/**********************************************************************//**
+ * C function to represent in the 7 segment display
+ **************************************************************************/
+void Represent_Display(uint8_t Decenas, uint8_t Centenas, uint8_t Enable);
 
 
 int main() {
@@ -114,14 +126,20 @@ int main() {
            neorv32_uart0_printf("%c",Key_value);
         }
         q_key_value = Key_value;
+        // Represent key
+        Represent_Display(Key_value,0,1);
       }
     }
     else{
       q_key_value = 0xFF;
     }
+
   }
   return 0;
 }
+
+
+
 
 uint8_t Lee_teclado(void){
   uint32_t Key_value = 0;
@@ -130,7 +148,7 @@ uint8_t Lee_teclado(void){
   uint8_t i = 0;
 
   //Read register 0
-  Key_value = neorv32_cpu_load_unsigned_word (WB_BASE_ADDRESS + WB_REG0_OFFSET) & 0x0000FFFF; 
+  Key_value = neorv32_cpu_load_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG0_OFFSET) & 0x0000FFFF; 
 
   // If the user push a key:
   if (Key_value != 0x00000000){
@@ -140,8 +158,36 @@ uint8_t Lee_teclado(void){
       Mask_Char = (Mask_Char << 1);
     }
     // Reset the register 0
-      neorv32_cpu_store_unsigned_word (WB_BASE_ADDRESS + WB_REG0_OFFSET, 0x00000000); 
+      neorv32_cpu_store_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG0_OFFSET, 0x00000000); 
   }
-
   return Caracter;
 };
+
+void Represent_Display(uint8_t Decenas, uint8_t Centenas, uint8_t Enable){
+
+  uint16_t FPGA_display;
+  uint16_t Mask;
+  uint8_t i;
+
+  for (i=3, Mask = 0x0004, FPGA_display = Decenas ; i<12 ; i++){
+    FPGA_display = Decenas == i ? Mask : FPGA_display;
+    Mask = (Mask << 1);
+  }
+
+  neorv32_cpu_store_unsigned_word (WB_DISPLAY_BASE_ADDRESS + WB_DISPLAY_REG0_OFFSET,  FPGA_display); // Escribo Decenas
+  
+    for (i=3, Mask = 0x0004, FPGA_display = Centenas ; i<12 ; i++){
+    FPGA_display = Centenas == i ? Mask : FPGA_display;
+    Mask = (Mask << 1);
+  }
+  
+  neorv32_cpu_store_unsigned_word (WB_DISPLAY_BASE_ADDRESS + WB_DISPLAY_REG1_OFFSET,  FPGA_display); // Escribo Centenas
+
+  if(Enable != 0){
+      neorv32_cpu_store_unsigned_word (WB_DISPLAY_BASE_ADDRESS + WB_DISPLAY_REG2_OFFSET, 0x00000001); // Indico que escriba el valor en el display
+  }
+  else{
+    neorv32_cpu_store_unsigned_word (WB_DISPLAY_BASE_ADDRESS + WB_DISPLAY_REG2_OFFSET, 0x00000000); // Indico que escriba el valor en el display    
+  }
+
+}
