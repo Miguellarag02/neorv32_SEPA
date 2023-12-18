@@ -106,7 +106,8 @@ int main() {
 
   neorv32_uart0_print("Program iniciated\n");
 
-  uint8_t Key_value = 0xFF; 
+  uint8_t Key_value = 0xFF;
+  uint8_t num = 0; 
   uint8_t q_key_value = 0xFF;
   uint32_t total_value = 0;
   int estado = 10;
@@ -154,10 +155,15 @@ int main() {
         break;
 
         case 0:  //Number
+          num = decena*10+Key_value;
           neorv32_uart0_print("Funciona 5\n");
           Represent_Display(decena,Key_value,1);
           total_value=(total_value<<4)+Key_value;
           total_value = total_value & 0xFF;
+          neorv32_uart0_printf("Total_value: %u\n",total_value);
+          neorv32_uart0_printf("num: %u\n",num);
+          neorv32_uart0_printf("Decena: %d\n",decena);
+          neorv32_uart0_printf("UNidad: %u\n",Key_value);
           decena = Key_value;
           estado = 10;
         break;
