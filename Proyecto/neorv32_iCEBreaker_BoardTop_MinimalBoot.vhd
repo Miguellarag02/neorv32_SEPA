@@ -152,22 +152,24 @@ architecture neorv32_iCEBreaker_BoardTop_MinimalBoot_rtl of neorv32_iCEBreaker_B
   signal c_counter : unsigned (1 downto 0):="00";
   signal n_counter : unsigned (1 downto 0):="00";
 
-  signal c_en : std_logic := '1';
-  signal n_en : std_logic := '1';
-
   -- Signals for Wishbone --
-  signal wb_tag_m2s   : std_ulogic_vector(2 downto 0);  -- Request tag
-  signal wb_adr_m2s   : std_ulogic_vector(31 downto 0); -- Address
-  signal wb_dat_s2m   : std_ulogic_vector(31 downto 0); -- Read Data
-  signal wb_dat_m2s   : std_ulogic_vector(31 downto 0); -- Write Data
-  signal wb_we_m2s    : std_ulogic;                     -- Read/Write
-  signal wb_sel_m2s   : std_ulogic_vector(3 downto 0);  -- Byte enable
-  signal wb_stb_m2s   : std_ulogic;                     -- Strobe
-  signal wb_cyc_m2s   : std_ulogic;                     -- Valid Cycle
-  signal wb_lock_m2s  : std_ulogic;                     -- Exclusive Acces
-  signal wb_ack_s2m   : std_ulogic;                     -- Transfer Ack
-  signal wb_err_s2m   : std_ulogic;                     -- Transfer error
+  signal wb_tag_m2s   : std_ulogic_vector(2 downto 0);          -- Request tag
+  signal wb_adr_m2s   : std_ulogic_vector(31 downto 0);         -- Address
+  signal wb_dat_keypad_s2m   : std_ulogic_vector(31 downto 0); -- Read Data from teclado
+  signal wb_dat_display_s2m   : std_ulogic_vector(31 downto 0); -- Read Data from display
+  signal wb_dat_m2s   : std_ulogic_vector(31 downto 0);         -- Write Data
+  signal wb_we_m2s    : std_ulogic;                             -- Read/Write
+  signal wb_sel_m2s   : std_ulogic_vector(3 downto 0);          -- Byte enable
+  signal wb_stb_m2s   : std_ulogic;                             -- Strobe
+  signal wb_cyc_m2s   : std_ulogic;                             -- Valid Cycle
+  signal wb_lock_m2s  : std_ulogic;                             -- Exclusive Acces
+  signal wb_ack_keypad_s2m   : std_ulogic;                     -- Transfer Ack from teclado 
+  signal wb_err_keypad_s2m   : std_ulogic;                     -- Transfer error from display
+  signal wb_ack_display_s2m   : std_ulogic;                    -- Transfer Ack from display 
+  signal wb_err_display_s2m   : std_ulogic;                    -- Transfer error from display
 
+
+  signal s_reset      : std_logic := '0';
 begin
 
   -- -------------------------------------------------------------------------------------------
@@ -257,15 +259,15 @@ begin
     -- Wishbone bus interface (available if MEM_EXT_EN = true) --
     wb_tag_o    => wb_tag_m2s,     -- request tag
     wb_adr_o    => wb_adr_m2s,     -- address
-    wb_dat_i    => wb_dat_s2m,     -- read data
+    wb_dat_i    => wb_dat_keypad_s2m or wb_ack_display_s2m,     -- read data
     wb_dat_o    => wb_dat_m2s,     -- write data
     wb_we_o     => wb_we_m2s,      -- read/write
     wb_sel_o    => wb_sel_m2s,     -- byte enable
     wb_stb_o    => wb_stb_m2s,     -- strobe
     wb_cyc_o    => wb_cyc_m2s,     -- valid cycle
     wb_lock_o   => wb_lock_m2s,    -- exclusive access request
-    wb_ack_i    => wb_ack_s2m,     -- transfer acknowledge
-    wb_err_i    => wb_err_s2m,     -- transfer error
+    wb_ack_i    => wb_ack_display_s2m or wb_ack_keypad_s2m,     -- transfer acknowledge
+    wb_err_i    => wb_err_display_s2m or wb_err_keypad_s2m,     -- transfer error
 
     -- Advanced memory control signals (available if MEM_EXT_EN = true) --
     fence_o     => open,                         -- indicates an executed FENCE operation
@@ -323,20 +325,20 @@ begin
               WB_ADDR_SIZE   => 32 )    
   port map(
     clk_i     => std_ulogic(iCEBreakerv10_CLK),
-    reset_i   => iCEBreakerv10_PMOD2_10_Button_3,
-    en_i      => c_en,
+    reset_i   => s_reset,
+    en_i      => '1',
 
     wb_tag_i  => wb_tag_m2s,     -- request tag
     wb_adr_i  => wb_adr_m2s,     -- address
     wb_dat_i  => wb_dat_m2s,     -- read data
-    wb_dat_o  => wb_dat_s2m,     -- write data
+    wb_dat_o  => wb_dat_keypad_s2m,     -- write data
     wb_we_i   => wb_we_m2s,      -- read/write
     wb_sel_i  => wb_sel_m2s,     -- byte enable
     wb_stb_i  => wb_stb_m2s,     -- strobe
     wb_cyc_i  => wb_cyc_m2s,     -- valid cycle
     wb_lock_i => wb_lock_m2s,    -- exclusive access request
-    wb_ack_o  => wb_ack_s2m,     -- transfer acknowledge
-    wb_err_o  => wb_err_s2m,     -- transfer error
+    wb_ack_o  => wb_ack_keypad_s2m,     -- transfer acknowledge
+    wb_err_o  => wb_err_keypad_s2m,     -- transfer error
 
     Row_1_i   => std_ulogic(iCEBreakerv10_PMOD1B_7),
     Row_2_i   => std_ulogic(iCEBreakerv10_PMOD1B_8), 
@@ -353,19 +355,19 @@ begin
                 WB_ADDR_SIZE   => 16 )    
     port map(
       clk_i     => std_ulogic(iCEBreakerv10_CLK),
-      reset_i   => iCEBreakerv10_PMOD2_10_Button_3,
+      reset_i   => s_reset,
   
       wb_tag_i  => wb_tag_m2s,     -- request tag
       wb_adr_i  => wb_adr_m2s,     -- address
       wb_dat_i  => wb_dat_m2s,     -- read data
-      wb_dat_o  => wb_dat_s2m,     -- write data
+      wb_dat_o  => wb_dat_display_s2m,     -- write data
       wb_we_i   => wb_we_m2s,      -- read/write
       wb_sel_i  => wb_sel_m2s,     -- byte enable
       wb_stb_i  => wb_stb_m2s,     -- strobe
       wb_cyc_i  => wb_cyc_m2s,     -- valid cycle
       wb_lock_i => wb_lock_m2s,    -- exclusive access request
-      wb_ack_o  => wb_ack_s2m,     -- transfer acknowledge
-      wb_err_o  => wb_err_s2m,     -- transfer error
+      wb_ack_o  => wb_ack_display_s2m,     -- transfer acknowledge
+      wb_err_o  => wb_err_display_s2m,     -- transfer error
 
             -- 7 Segment Dislay
       aa_o      => iCEBreakerv10_PMOD1A_1,
@@ -387,6 +389,7 @@ begin
   iCEBreakerv10_PMOD2_8_LED_up     <= gpio_o(2);
   iCEBreakerv10_PMOD2_3_LED_down   <= gpio_o(3);
   iCEBreakerv10_PMOD2_7_LED_center <= gpio_o(4);  
+  s_reset  <= gpio_o(5);
 
   gpio_i <= x"000000000000000"  &
             c_button_val;
@@ -398,11 +401,9 @@ begin
   begin
     if (iCEBreakerv10_PMOD2_10_Button_3) then --Reset
       c_button_val <= (others => '0'); 
-      c_en         <= '0';
   
     elsif (rising_edge(iCEBreakerv10_CLK)) then
       c_button_val <= n_button_val;
-      c_en         <= n_en;
 
     end if;
 
@@ -412,14 +413,11 @@ begin
   begin
  	-- Keep the state
   	n_button_val <= c_button_val; 
-    n_en <= c_en;
   	-- We are sending which buttom has been pushed
   	if (iCEBreakerv10_PMOD2_9_Button_1 = '1') then
 		n_button_val <= x"1";
-    n_en <= '0'; -- Desactive the peripheral
 	elsif (iCEBreakerv10_PMOD2_4_Button_2 = '1') then
 		n_button_val <= x"2";
-    n_en <= '1'; -- Active the peripheral
 	elsif (iCEBreakerv10_PMOD2_10_Button_3 = '1') then 
 		n_button_val <= x"3";
 

@@ -45,18 +45,11 @@
 /************************************************************************//**
  * DEFINES :
  * *************************************************************************/
-#define WB_TECLADO_BASE_ADDRESS 0x90000000
-#define WB_TECLADO_REG0_OFFSET 0x00
-#define WB_TECLADO_REG1_OFFSET 0x04
-#define WB_TECLADO_REG2_OFFSET 0x08
-#define WB_TECLADO_REG3_OFFSET 0x0C
-#define WB_TECLADO_REG4_OFFSET 0x10
-
-#define WB_DISPLAY_BASE_ADDRESS 0x90000020 
-#define WB_DISPLAY_REG0_OFFSET 0x00
-#define WB_DISPLAY_REG1_OFFSET 0x04
-#define WB_DISPLAY_REG2_OFFSET 0x08
-
+#define WB_BASE_ADDRESS 0x90000000
+#define WB_REG0_OFFSET 0x00
+#define WB_REG1_OFFSET 0x04
+#define WB_REG2_OFFSET 0x08
+#define WB_REG3_OFFSET 0x0C
 
 /**********************************************************************//**
  * @name User configuration
@@ -126,16 +119,9 @@ int main() {
     else{
       q_key_value = 0xFF;
     }
-  neorv32_cpu_store_unsigned_word (WB_DISPLAY_BASE_ADDRESS + WB_DISPLAY_REG0_OFFSET, 0x1); // Escribo 1 en los decimales
-  neorv32_cpu_store_unsigned_word (WB_DISPLAY_BASE_ADDRESS + WB_DISPLAY_REG1_OFFSET, Key_value+1); // Escribo Key_value en las centenas
-  neorv32_cpu_store_unsigned_word (WB_DISPLAY_BASE_ADDRESS + WB_DISPLAY_REG2_OFFSET, 0x00000001); // Indico que escriba el valor en el display
-
   }
   return 0;
 }
-
-
-
 
 uint8_t Lee_teclado(void){
   uint32_t Key_value = 0;
@@ -144,7 +130,7 @@ uint8_t Lee_teclado(void){
   uint8_t i = 0;
 
   //Read register 0
-  Key_value = neorv32_cpu_load_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG0_OFFSET) & 0x0000FFFF; 
+  Key_value = neorv32_cpu_load_unsigned_word (WB_BASE_ADDRESS + WB_REG0_OFFSET) & 0x0000FFFF; 
 
   // If the user push a key:
   if (Key_value != 0x00000000){
@@ -154,7 +140,7 @@ uint8_t Lee_teclado(void){
       Mask_Char = (Mask_Char << 1);
     }
     // Reset the register 0
-      neorv32_cpu_store_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG0_OFFSET, 0x00000000); 
+      neorv32_cpu_store_unsigned_word (WB_BASE_ADDRESS + WB_REG0_OFFSET, 0x00000000); 
   }
 
   return Caracter;

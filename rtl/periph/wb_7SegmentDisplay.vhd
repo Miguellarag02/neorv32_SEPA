@@ -32,14 +32,14 @@ entity wb_7segmentDisplay is
     wb_err_o             : out  std_ulogic;
 
     -- 7 Segment Dislay
-    aa_o                 : out  std_ulogic;
-    ab_o                 : out  std_ulogic;
-    ac_o                 : out  std_ulogic;
-    ad_o                 : out  std_ulogic;
-    ae_o                 : out  std_ulogic;
-    af_o                 : out  std_ulogic;
-    ag_o                 : out  std_ulogic;
-    ds_o                 : out  std_ulogic
+    aa_o                 : out  std_logic;
+    ab_o                 : out  std_logic;
+    ac_o                 : out  std_logic;
+    ad_o                 : out  std_logic;
+    ae_o                 : out  std_logic;
+    af_o                 : out  std_logic;
+    ag_o                 : out  std_logic;
+    ds_o                 : out  std_logic
 
 
     );
@@ -76,8 +76,8 @@ architecture wb_7segmentDisplay_rtl of wb_7segmentDisplay is
     signal c_counter        : unsigned (16 downto 0);
     signal n_counter        : unsigned (16 downto 0);
 
-    signal s_decod_num     : std_ulogic_vector(6 downto 0);
-    signal s_num           : std_ulogic_vector(11 downto 0);
+    signal s_decod_num     : std_logic_vector(6 downto 0);
+    signal s_num           : std_logic_vector(11 downto 0);
 
     begin
 
@@ -229,23 +229,23 @@ architecture wb_7segmentDisplay_rtl of wb_7segmentDisplay is
     -------------------------------------------------------
 
     WITH (c_ds) SELECT
-    s_num           <= c_reg0(11 downto 0) when '0',
-                       c_reg1(11 downto 0) when others;
+    s_num           <= std_logic_vector(c_reg0(11 downto 0)) when '0',
+                       std_logic_vector(c_reg1(11 downto 0)) when others;
 
 
     WITH (s_num) SELECT
-    s_decod_num    <=  "1111110" when x"000", -- 0
-                        "0110000" when x"001", -- 1
+    s_decod_num    <=   "1111110" when x"000", -- 0
+                        "0000110" when x"001", -- 1
                         "1101101" when x"002", -- 2
-                        "1111001" when x"004", -- 3
-                        "0110011" when x"008", -- 4
-                        "1011010" when x"010", -- 5
-                        "1011111" when x"020", -- 6
-                        "1110000" when x"040", -- 7
+                        "1001111" when x"004", -- 3
+                        "0010111" when x"008", -- 4
+                        "1011011" when x"010", -- 5
+                        "1111011" when x"020", -- 6
+                        "0001110" when x"040", -- 7
                         "1111111" when x"080", -- 8
-                        "1110011" when x"100", -- 9
-                        "1110110" when x"200", -- N
-                        "1110110" when others; -- P
+                        "0011111" when x"100", -- 9
+                        "0111110" when x"200", -- N
+                        "0111101" when others; -- P
 
 
 
