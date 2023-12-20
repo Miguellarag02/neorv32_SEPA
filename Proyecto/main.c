@@ -121,16 +121,16 @@ int main() {
   neorv32_cpu_store_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG1_OFFSET, 0x00000000);
   neorv32_cpu_store_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG2_OFFSET, 0x00000000);
   neorv32_cpu_store_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG4_OFFSET, 0x00000000);
-  neorv32_cpu_store_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG3_OFFSET, 0x00555555);
+  neorv32_cpu_store_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG3_OFFSET, 0x75123456);
   
   
 
   while(1){
     //to know always whats happening on the registers
-    uint32_t registro0 = neorv32_cpu_load_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG0_OFFSET);   
+    //uint32_t registro0 = neorv32_cpu_load_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG0_OFFSET);   
     uint32_t registro1 = neorv32_cpu_load_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG1_OFFSET);   
     uint32_t registro2 = neorv32_cpu_load_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG2_OFFSET);   
-    uint32_t registro3 = neorv32_cpu_load_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG3_OFFSET);
+    //uint32_t registro3 = neorv32_cpu_load_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG3_OFFSET);
     uint32_t registro4 = neorv32_cpu_load_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG4_OFFSET);
    
     
@@ -172,10 +172,10 @@ int main() {
           estado = 10;
 
           //Show registers to see how it works easier
-          neorv32_uart0_printf("Registro 1: %x\n",registro1);
-          neorv32_uart0_printf("Registro 2: %x\n",registro2);
-          neorv32_uart0_printf("Registro 3: %x\n",registro3);
-          neorv32_uart0_printf("Registro 4: %x\n",registro4);
+          //  neorv32_uart0_printf("Registro 1: %x\n",registro1);
+          //  neorv32_uart0_printf("Registro 2: %x\n",registro2);
+          //  neorv32_uart0_printf("Registro 3: %x\n",registro3);
+          //  neorv32_uart0_printf("Registro 4: %x\n",registro4);
 
 
         break;
@@ -232,7 +232,7 @@ int main() {
         case 69:  //E-->Reset
           neorv32_gpio_port_set(0x20);  //General reset except to reg3
           neorv32_gpio_port_set(0x00);
-          neorv32_cpu_store_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG3_OFFSET, 0x00555555);
+          neorv32_cpu_store_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG3_OFFSET, 0x75123456);
           v_gpio = 0x00;
           estado = 10;
           neorv32_uart0_print("\nVariables y claves reseteadas\n");
@@ -331,7 +331,7 @@ int main() {
           neorv32_cpu_delay_ms(3000);
           neorv32_gpio_port_set(0x20); //General reset except to reg3
           neorv32_gpio_port_set(0x00);
-          neorv32_cpu_store_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG3_OFFSET, 0x00555555);
+          neorv32_cpu_store_unsigned_word (WB_TECLADO_BASE_ADDRESS + WB_TECLADO_REG3_OFFSET, 0x75123456);
           Represent_Display(10,11,0); //-->--
           v_gpio = 0x00;
           decena = 0;
